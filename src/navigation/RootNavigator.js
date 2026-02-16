@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useTheme } from '../context/ThemeContext';
 import Login from '../screens/Auth/Login';
+import SignUp from '../screens/Auth/SignUp';
 import SliderStory from '../screens/Home/SliderStory/SliderStory';
 import SplashScreen from '../screens/Splash/SplashScreen';
 
@@ -31,6 +32,8 @@ export default function RootNavigator() {
         >
             <Stack.Screen name="Splash" component={SplashScreen} />
             <Stack.Screen name="login" component={Login} />
+            <Stack.Screen name="SignUp" component={SignUp} />
+            
             <Stack.Screen name="Home" component={SliderStory} />
             {/* <Stack.Screen name="Profile" component={ProfileScreen} /> */}
         </Stack.Navigator>

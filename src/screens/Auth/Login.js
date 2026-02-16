@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
 import { Image, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native'; // Add TextInput here
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,12 +16,13 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const navigation = useNavigation()
 
   const handleLogin = () => {
     setLoading(true);
     setTimeout(() => setLoading(false), 2000);
   };
-  
+
 
   return (
     <ThemedView style={styles.container}>
@@ -161,7 +163,7 @@ export default function LoginScreen() {
           <ThemedText style={styles.signupText}>
             Don't have an account?{' '}
           </ThemedText>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
             <ThemedText style={[styles.signupLink, { color: colors.primary }]}>
               Sign Up
             </ThemedText>
@@ -193,11 +195,12 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   welcome: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '400',
     marginBottom: 8,
     fontFamily: 'CoFoRaffineBold',
     textAlign: 'center',
+    letterSpacing: 2
   },
   subtitle: {
     fontSize: 14,
@@ -205,7 +208,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     fontFamily: 'tenez',
     textAlign: 'center',
-    color: '#000000'
+    color: '#000000',
   },
   inputWrapper: {
     marginBottom: 20,
@@ -215,6 +218,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 8,
     fontFamily: 'CoFoRaffineBold',
+    letterSpacing: 1
   },
   inputContainer: {
     flexDirection: 'row',
@@ -242,6 +246,7 @@ const styles = StyleSheet.create({
   rememberContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+
   },
   checkbox: {
     width: 18,
@@ -260,11 +265,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '400',
     fontFamily: 'tenez',
+    letterSpacing: 1
   },
   forgot: {
     fontSize: 14,
     fontWeight: '400',
     fontFamily: 'CoFoRaffineBold',
+    letterSpacing: 1
   },
   loginButton: {
     marginBottom: 32,
@@ -299,6 +306,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     marginHorizontal: 16,
     fontFamily: 'tenez',
+    letterSpacing: 1
   },
   signupContainer: {
     flexDirection: 'row',
@@ -309,13 +317,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '400',
     fontFamily: 'tenez',
-    color : '#636F85'
+    color: '#636F85',
+    letterSpacing: 1
   },
   signupLink: {
     fontSize: 16,
     fontWeight: '700',
     // textDecorationLine: 'underline',
     fontFamily: 'tenez',
-
+    letterSpacing: 1
   },
 });
