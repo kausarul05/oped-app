@@ -20,6 +20,7 @@ export default function LoginScreen() {
     setLoading(true);
     setTimeout(() => setLoading(false), 2000);
   };
+  
 
   return (
     <ThemedView style={styles.container}>
@@ -54,7 +55,7 @@ export default function LoginScreen() {
                 styles.input,
                 {
                   color: colors.text,
-                  fontFamily: 'CoFo Raffine',
+                  fontFamily: 'CoFoRaffine',
                 }
               ]}
             />
@@ -76,7 +77,7 @@ export default function LoginScreen() {
                 styles.input,
                 {
                   color: colors.text,
-                  fontFamily: 'CoFo Raffine',
+                  fontFamily: 'CoFoRaffine',
                 }
               ]}
             />
@@ -193,17 +194,18 @@ const styles = StyleSheet.create({
   },
   welcome: {
     fontSize: 26,
-    fontWeight: '600',
+    fontWeight: '400',
     marginBottom: 8,
-    fontFamily: 'CoFo Raffine',
+    fontFamily: 'CoFoRaffineBold',
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 14,
     fontWeight: '400',
     marginBottom: 32,
-    fontFamily: 'CoFo Raffine',
+    fontFamily: 'tenez',
     textAlign: 'center',
+    color: '#000000'
   },
   inputWrapper: {
     marginBottom: 20,
@@ -212,7 +214,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginBottom: 8,
-    fontFamily: 'CoFo Raffine',
+    fontFamily: 'CoFoRaffineBold',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -257,15 +259,16 @@ const styles = StyleSheet.create({
   rememberText: {
     fontSize: 14,
     fontWeight: '400',
-    fontFamily: 'CoFo Raffine',
+    fontFamily: 'tenez',
   },
   forgot: {
     fontSize: 14,
     fontWeight: '400',
-    fontFamily: 'CoFo Raffine',
+    fontFamily: 'CoFoRaffineBold',
   },
   loginButton: {
     marginBottom: 32,
+    fontFamily: 'CoFoRaffineBold',
   },
   socialContainer: {
     flexDirection: 'row',
@@ -295,7 +298,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '400',
     marginHorizontal: 16,
-    fontFamily: 'CoFo Raffine',
+    fontFamily: 'tenez',
   },
   signupContainer: {
     flexDirection: 'row',
@@ -305,14 +308,14 @@ const styles = StyleSheet.create({
   signupText: {
     fontSize: 16,
     fontWeight: '400',
-    fontFamily: 'CoFo Raffine',
+    fontFamily: 'tenez',
     color : '#636F85'
   },
   signupLink: {
     fontSize: 16,
     fontWeight: '700',
     // textDecorationLine: 'underline',
-    fontFamily: 'CoFo Raffine',
+    fontFamily: 'tenez',
 
   },
 });

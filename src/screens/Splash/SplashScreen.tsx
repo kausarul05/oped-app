@@ -25,11 +25,11 @@ export default function SplashScreen() {
     }}>
       <Image 
         source={require('../../../assets/images/logo.png')} 
-        // style={{ width: 200, height: "auto" }} 
+        style={{ width: 300, height: 300 }} // Add appropriate dimensions
       />
       <Image 
         source={require('../../../assets/images/logo-icon.png')} 
-        style={{ position: "absolute", bottom: 50, right: 50 }} 
+        style={{ position: "absolute", bottom: 20, right: 20, width: 100, height: 100 }} // Add appropriate dimensions
       />
     </View>
   );

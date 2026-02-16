@@ -97,7 +97,7 @@ const GradientButton = ({
                   color: textColor,
                   fontSize: sizeStyle.fontSize,
                   fontWeight: '600',
-                  fontFamily: 'CoFo Raffine',
+                  fontFamily: 'CoFoRaffineBold',
                 },
                 textStyle,
               ]}>
