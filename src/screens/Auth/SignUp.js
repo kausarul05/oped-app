@@ -440,13 +440,15 @@ const styles = StyleSheet.create({
     },
     loginText: {
         fontSize: 16,
-        fontWeight: '400',
-        fontFamily: 'CoFo Raffine',
+        fontWeight: '600',
+        fontFamily: 'tenez',
+        letterSpacing: 1
     },
     loginLink: {
         fontSize: 16,
         fontWeight: '600',
-        textDecorationLine: 'underline',
-        fontFamily: 'CoFo Raffine',
+        // textDecorationLine: 'underline',
+        fontFamily: 'tenez',
+        letterSpacing: 1
     },
 });
