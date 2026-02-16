@@ -25,7 +25,8 @@ export default function SignUp() {
     const handleSignUp = () => {
         setLoading(true);
         // Simulate API call
-        setTimeout(() => setLoading(false), 2000);
+        // setTimeout(() => setLoading(false), 2000);
+        navigation.navigate('Verification');
     };
 
     // Gradient colors for selected role

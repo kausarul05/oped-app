@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   },
   signupLink: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '400',
     // textDecorationLine: 'underline',
     fontFamily: 'tenez',
     letterSpacing: 1

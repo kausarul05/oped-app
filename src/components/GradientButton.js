@@ -1,5 +1,7 @@
+// src/components/GradientButton.js
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
 import {
     ActivityIndicator,
     StyleSheet,
@@ -8,7 +10,6 @@ import {
     View,
 } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
-import { BUTTON_SIZES, BUTTON_VARIANTS } from './GradientButton.variants';
 
 const GradientButton = ({
   title,
@@ -19,7 +20,7 @@ const GradientButton = ({
   iconPosition = 'left',
   variant = 'PRIMARY',
   size = 'LARGE',
-  customGradientColors,
+  gradientColors: customGradientColors, // Rename prop to avoid conflict
   customShadowColor,
   customTextColor,
   gradientStart = { x: 0, y: 0 },
@@ -31,23 +32,69 @@ const GradientButton = ({
 }) => {
   const { colors } = useTheme();
 
+  // Define button variants
+  const BUTTON_VARIANTS = {
+    PRIMARY: {
+      gradientColors: ['#343E87', '#3448D6', '#343E87'],
+      shadowColor: '#343E87',
+      shadowOpacity: 0.06,
+      textColor: '#FFFFFF',
+    },
+    SECONDARY: {
+      gradientColors: ['#6C63FF', '#4A47B1', '#6C63FF'],
+      shadowColor: '#6C63FF',
+      shadowOpacity: 0.08,
+      textColor: '#FFFFFF',
+    },
+    DISABLED: {
+      gradientColors: ['#CCCCCC', '#BBBBBB', '#CCCCCC'],
+      shadowColor: '#999999',
+      shadowOpacity: 0.04,
+      textColor: '#666666',
+    },
+  };
+
+  // Define size variants
+  const BUTTON_SIZES = {
+    SMALL: {
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      fontSize: 14,
+      borderRadius: 20,
+    },
+    MEDIUM: {
+      paddingVertical: 14,
+      paddingHorizontal: 20,
+      fontSize: 16,
+      borderRadius: 25,
+    },
+    LARGE: {
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      fontSize: 18,
+      borderRadius: 30,
+    },
+  };
+
   // Get variant styles
   const variantStyle = BUTTON_VARIANTS[variant] || BUTTON_VARIANTS.PRIMARY;
   
   // Get size styles
   const sizeStyle = BUTTON_SIZES[size] || BUTTON_SIZES.LARGE;
 
-  // Use custom colors if provided, otherwise use variant colors
-  const gradientColors = customGradientColors || variantStyle.gradientColors;
-  const shadowColor = customShadowColor || variantStyle.shadowColor;
-  const textColor = customTextColor || variantStyle.textColor;
+  // Determine colors - use custom if provided, otherwise use variant
+  let finalGradientColors;
+  let finalShadowColor;
+  let finalTextColor;
 
-  // If disabled, use disabled variant
   if (disabled) {
-    const disabledStyle = BUTTON_VARIANTS.DISABLED;
-    gradientColors = disabledStyle.gradientColors;
-    shadowColor = disabledStyle.shadowColor;
-    textColor = disabledStyle.textColor;
+    finalGradientColors = BUTTON_VARIANTS.DISABLED.gradientColors;
+    finalShadowColor = BUTTON_VARIANTS.DISABLED.shadowColor;
+    finalTextColor = BUTTON_VARIANTS.DISABLED.textColor;
+  } else {
+    finalGradientColors = customGradientColors || variantStyle.gradientColors;
+    finalShadowColor = customShadowColor || variantStyle.shadowColor;
+    finalTextColor = customTextColor || variantStyle.textColor;
   }
 
   return (
@@ -58,7 +105,7 @@ const GradientButton = ({
         styles.container,
         fullWidth && styles.fullWidth,
         {
-          shadowColor: shadowColor,
+          shadowColor: finalShadowColor,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: variantStyle.shadowOpacity,
           shadowRadius: 8,
@@ -67,7 +114,7 @@ const GradientButton = ({
         style,
       ]}>
       <LinearGradient
-        colors={gradientColors}
+        colors={finalGradientColors}
         start={gradientStart}
         end={gradientEnd}
         style={[
@@ -79,14 +126,14 @@ const GradientButton = ({
           },
         ]}>
         {loading ? (
-          <ActivityIndicator color={textColor} />
+          <ActivityIndicator color={finalTextColor} />
         ) : (
           <View style={styles.contentContainer}>
             {icon && iconPosition === 'left' && (
               <Ionicons
                 name={icon}
                 size={sizeStyle.fontSize + 2}
-                color={textColor}
+                color={finalTextColor}
                 style={[styles.leftIcon, iconStyle]}
               />
             )}
@@ -94,10 +141,11 @@ const GradientButton = ({
               style={[
                 styles.text,
                 {
-                  color: textColor,
+                  color: finalTextColor,
                   fontSize: sizeStyle.fontSize,
-                  fontWeight: '600',
+                  fontWeight: '400',
                   fontFamily: 'CoFoRaffineBold',
+                  letterSpacing: 1
                 },
                 textStyle,
               ]}>
@@ -107,7 +155,7 @@ const GradientButton = ({
               <Ionicons
                 name={icon}
                 size={sizeStyle.fontSize + 2}
-                color={textColor}
+                color={finalTextColor}
                 style={[styles.rightIcon, iconStyle]}
               />
             )}
