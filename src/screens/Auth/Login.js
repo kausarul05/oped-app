@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
-import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native'; // Add TextInput here
 import { SafeAreaView } from 'react-native-safe-area-context';
+import GradientButton from '../../components/GradientButton';
 import {
   ThemedText,
   ThemedView
@@ -10,7 +10,7 @@ import {
 import { useTheme } from '../../hooks/useTheme';
 
 export default function LoginScreen() {
-  const { colors, spacing } = useTheme();
+  const { colors } = useTheme();
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -43,13 +43,20 @@ export default function LoginScreen() {
           <ThemedText style={styles.inputLabel}>Email Address</ThemedText>
           <View style={[styles.inputContainer, { borderColor: colors.border }]}>
             <Ionicons name="mail-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-            <ThemedInput
+            <TextInput  // Changed from ThemedInput to TextInput
               value={email}
               onChangeText={setEmail}
               placeholder="Enter your email address"
+              placeholderTextColor={colors.textTertiary}
               keyboardType="email-address"
               autoCapitalize="none"
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  color: colors.text,
+                  fontFamily: 'CoFo Raffine',
+                }
+              ]}
             />
           </View>
         </View>
@@ -59,12 +66,19 @@ export default function LoginScreen() {
           <ThemedText style={styles.inputLabel}>Password</ThemedText>
           <View style={[styles.inputContainer, { borderColor: colors.border }]}>
             <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-            <ThemedInput
+            <TextInput  // Changed from ThemedInput to TextInput
               value={password}
               onChangeText={setPassword}
               placeholder="**********"
+              placeholderTextColor={colors.textTertiary}
               secureTextEntry
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  color: colors.text,
+                  fontFamily: 'CoFo Raffine',
+                }
+              ]}
             />
           </View>
         </View>
@@ -90,7 +104,7 @@ export default function LoginScreen() {
             </View>
             <ThemedText style={styles.rememberText}>Remember Me</ThemedText>
           </TouchableOpacity>
-          
+
           <TouchableOpacity>
             <ThemedText style={[styles.forgot, { color: colors.link }]}>
               Forgot Password?
@@ -98,22 +112,23 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Login Button with Gradient */}
-        <TouchableOpacity
+        {/* Login Button - Using GradientButton */}
+        <GradientButton
+          title="Log In"
           onPress={handleLogin}
-          disabled={loading}
-          style={styles.gradientButtonContainer}>
-          <LinearGradient
-            colors={['#343E87', '#3448D6', '#343E87']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.gradientButton}
-          >
-            <ThemedText style={styles.gradientButtonText}>
-              {loading ? 'Logging in...' : 'Login'}
-            </ThemedText>
-          </LinearGradient>
-        </TouchableOpacity>
+          loading={loading}
+          variant="PRIMARY"
+          size="LARGE"
+          fullWidth={true}
+          style={styles.loginButton}
+        />
+
+        {/* OR Separator */}
+        <View style={styles.orContainer}>
+          <View style={[styles.line, { backgroundColor: colors.line }]} />
+          <ThemedText style={styles.orText}>OR</ThemedText>
+          <View style={[styles.line, { backgroundColor: colors.line }]} />
+        </View>
 
         {/* Social Login - Icons Only */}
         <View style={styles.socialContainer}>
@@ -140,13 +155,6 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* OR Separator */}
-        <View style={styles.orContainer}>
-          <View style={[styles.line, { backgroundColor: colors.line }]} />
-          <ThemedText style={styles.orText}>OR</ThemedText>
-          <View style={[styles.line, { backgroundColor: colors.line }]} />
-        </View>
-
         {/* Sign Up Link */}
         <View style={styles.signupContainer}>
           <ThemedText style={styles.signupText}>
@@ -162,26 +170,6 @@ export default function LoginScreen() {
     </ThemedView>
   );
 }
-
-// Custom ThemedInput component for this screen
-const ThemedInput = ({ style, ...props }) => {
-  const { colors } = useTheme();
-  return (
-    <ThemedText
-      style={[
-        {
-          color: colors.text,
-          fontFamily: 'CoFo Raffine',
-          fontSize: 16,
-          flex: 1,
-          paddingVertical: 12,
-        },
-        style,
-      ]}
-      {...props}
-    />
-  );
-};
 
 const styles = StyleSheet.create({
   container: {
@@ -201,17 +189,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 40,
   },
   welcome: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '600',
     marginBottom: 8,
     fontFamily: 'CoFo Raffine',
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '400',
     marginBottom: 32,
     fontFamily: 'CoFo Raffine',
@@ -230,6 +218,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
+    borderColor: '#C1D0E5',
     borderRadius: 8,
     paddingHorizontal: 12,
     backgroundColor: 'transparent',
@@ -240,6 +229,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     paddingVertical: 12,
+    fontSize: 16,
   },
   row: {
     flexDirection: 'row',
@@ -274,31 +264,14 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     fontFamily: 'CoFo Raffine',
   },
-  gradientButtonContainer: {
-    marginBottom: 20,
-    shadowColor: '#343E87',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06, // #343E870F has opacity ~0.06
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  gradientButton: {
-    borderRadius: 30,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gradientButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-    fontFamily: 'CoFo Raffine',
+  loginButton: {
+    marginBottom: 32,
   },
   socialContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 32,
     gap: 16,
   },
   socialIconButton: {
@@ -333,11 +306,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '400',
     fontFamily: 'CoFo Raffine',
+    color : '#636F85'
   },
   signupLink: {
     fontSize: 16,
-    fontWeight: '600',
-    textDecorationLine: 'underline',
+    fontWeight: '700',
+    // textDecorationLine: 'underline',
     fontFamily: 'CoFo Raffine',
+
   },
 });

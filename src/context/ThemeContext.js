@@ -16,7 +16,7 @@ const lightTheme = {
   textInverse: '#FFFFFF',
   
   // Brand
-  primary: '#000000',
+  primary: '#3448D6',
   secondary: '#0066CC',
   accent: '#4A9EFF',
   
@@ -27,7 +27,7 @@ const lightTheme = {
   info: '#2196F3',
   
   // Borders & Lines
-  border: '#E0E0E0',
+  border: '#C1D0E5',
   borderLight: '#F0F0F0',
   borderDark: '#CCCCCC',
   
@@ -43,11 +43,11 @@ const lightTheme = {
   buttonDisabled: '#CCCCCC',
   
   // Social
-  socialButtonBg: '#F5F5F5',
+  socialButtonBg: '#000000',
   socialButtonBorder: '#E0E0E0',
   
   // Icons
-  icon: '#000000',
+  icon: '#fff',
   iconSecondary: '#666666',
   
   // Checkbox
@@ -56,7 +56,7 @@ const lightTheme = {
   checkboxCheck: '#000000',
   
   // Links
-  link: '#0066CC',
+  link: '#EB4335',
   
   // Separators
   line: '#E0E0E0',
@@ -115,7 +115,7 @@ const darkTheme = {
   buttonDisabled: '#444444',
   
   // Social
-  socialButtonBg: '#1E1E1E',
+  socialButtonBg: '#000000',
   socialButtonBorder: '#333333',
   
   // Icons
