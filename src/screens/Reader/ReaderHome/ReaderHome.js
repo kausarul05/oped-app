@@ -1,17 +1,15 @@
 import { ThemedView } from '@/src/components/ThemedComponents';
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import ReaderNavbar from './ReaderNavbar';
+import ReaderSlider from './ReaderSlider';
 
 export default function ReaderHome() {
     return (
         <ThemedView style={styles.container}>
             <ReaderNavbar />
             <ScrollView style={styles.content}>
-                {/* Your main content here */}
-                <View style={styles.placeholder}>
-                    {/* Content will go here */}
-                </View>
+                <ReaderSlider />
             </ScrollView>
         </ThemedView>
     );

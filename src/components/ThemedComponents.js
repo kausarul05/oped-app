@@ -1,10 +1,10 @@
 import React from 'react';
 import {
-    ActivityIndicator,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 
@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 export const ThemedText = ({ style, children, ...props }) => {
   const { colors } = useTheme();
   return (
-    <Text style={[{ color: colors.text, fontFamily: 'CoFo Raffine' }, style]} {...props}>
+    <Text style={[{ color: colors.text, fontFamily: 'CoFoRaffine' }, style]} {...props}>
       {children}
     </Text>
   );
@@ -63,7 +63,7 @@ export const ThemedInput = ({ style, icon, ...props }) => {
             paddingHorizontal: icon ? spacing.xl : spacing.md,
             paddingVertical: spacing.md,
             color: colors.text,
-            fontFamily: 'CoFo Raffine',
+            fontFamily: 'CoFoRaffine',
             width: '100%',
           },
           style,
@@ -159,7 +159,7 @@ export const ThemedButton = ({
                 color: buttonColors.text,
                 fontSize: 18,
                 fontWeight: '600',
-                fontFamily: 'CoFo Raffine',
+                fontFamily: 'CoFoRaffine',
               },
               textStyle,
             ]}>
