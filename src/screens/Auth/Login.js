@@ -108,7 +108,7 @@ export default function LoginScreen() {
             <ThemedText style={styles.rememberText}>Remember Me</ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
             <ThemedText style={[styles.forgot, { color: colors.link }]}>
               Forgot Password?
             </ThemedText>
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 8,
+    marginBottom: 4,
     fontFamily: 'CoFoRaffineBold',
     letterSpacing: 1
   },
