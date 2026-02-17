@@ -9,10 +9,12 @@ import {
     ThemedText,
     ThemedView
 } from '../../components/ThemedComponents';
+import { useRole } from '../../context/RoleContext';
 import { useTheme } from '../../hooks/useTheme';
 
 export default function SignUp() {
     const { colors } = useTheme();
+    const { saveUserRole } = useRole(); // Get saveUserRole from context
     const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const [name, setName] = useState('');
@@ -20,13 +22,20 @@ export default function SignUp() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [selectedRole, setSelectedRole] = useState('reader'); // 'reader' or 'writer'
-    const navigation = useNavigation()
+    const navigation = useNavigation();
 
-    const handleSignUp = () => {
+    const handleSignUp = async () => {
         setLoading(true);
+        
         // Simulate API call
-        // setTimeout(() => setLoading(false), 2000);
-        navigation.navigate('Verification');
+        setTimeout(async () => {
+            // Save the selected role
+            await saveUserRole(selectedRole);
+            setLoading(false);
+            
+            // Navigation will be handled automatically by RootNavigator
+            // based on the saved role
+        }, 2000);
     };
 
     // Gradient colors for selected role
@@ -448,7 +457,6 @@ const styles = StyleSheet.create({
     loginLink: {
         fontSize: 16,
         fontWeight: '600',
-        // textDecorationLine: 'underline',
         fontFamily: 'tenez',
         letterSpacing: 1
     },

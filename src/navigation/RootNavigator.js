@@ -1,4 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { ActivityIndicator, View } from 'react-native';
+import { useRole } from '../context/RoleContext';
 import { useTheme } from '../context/ThemeContext';
 import ForgotPassword from '../screens/Auth/ForgotPassword';
 import FPVerification from '../screens/Auth/FPVerification';
@@ -8,14 +10,27 @@ import SignUp from '../screens/Auth/SignUp';
 import Verification from '../screens/Auth/Verification';
 import SliderStory from '../screens/Home/SliderStory/SliderStory';
 import SplashScreen from '../screens/Splash/SplashScreen';
-
-// Import your screens
-
+import ReaderNavigator from './ReaderNavigator';
+import WriterNavigator from './WriterNavigator';
 
 const Stack = createNativeStackNavigator();
 
 export default function RootNavigator() {
     const { colors } = useTheme();
+    const { userRole, isLoading } = useRole();
+
+    if (isLoading) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+                <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+        );
+    }
+
+    // If user is logged in, navigate to role-based screen
+    if (userRole) {
+        return userRole === 'reader' ? <ReaderNavigator /> : <WriterNavigator />;
+    }
     return (
         <Stack.Navigator
             initialRouteName="Splash"

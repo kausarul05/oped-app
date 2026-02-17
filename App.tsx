@@ -2,6 +2,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useState } from 'react';
+import { RoleProvider } from './src/context/RoleContext';
 import { ThemeProvider } from './src/context/ThemeContext';
 import RootNavigator from './src/navigation/RootNavigator';
 
@@ -69,9 +70,11 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <NavigationContainer>
-        <RootNavigator />
-      </NavigationContainer>
+      <RoleProvider>
+        <NavigationContainer>
+          <RootNavigator />
+        </NavigationContainer>
+      </RoleProvider>
     </ThemeProvider>
   );
 }
