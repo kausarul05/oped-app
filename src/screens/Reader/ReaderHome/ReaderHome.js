@@ -1,16 +1,28 @@
 import { ThemedView } from '@/src/components/ThemedComponents';
 import React from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
+import PostsList from './PostsList';
 import ReaderNavbar from './ReaderNavbar';
+import ReaderQuickLink from './ReaderQuickLink';
 import ReaderSlider from './ReaderSlider';
 
 export default function ReaderHome() {
     return (
         <ThemedView style={styles.container}>
             <ReaderNavbar />
-            <ScrollView style={styles.content}>
-                <ReaderSlider />
-            </ScrollView>
+            <FlatList
+                data={[]}
+                renderItem={null}
+                ListHeaderComponent={
+                    <View style={styles.headerContainer}>
+                        <ReaderSlider />
+                        <ReaderQuickLink />
+                    </View>
+                }
+                ListFooterComponent={<PostsList />}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.listContent}
+            />
         </ThemedView>
     );
 }
@@ -18,13 +30,14 @@ export default function ReaderHome() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#FFFFFF',
+
     },
-    content: {
-        flex: 1,
-        padding: 20,
+    listContent: {
+        paddingHorizontal: 16, // Add paddingHorizontal to the entire list
     },
-    placeholder: {
-        height: 500,
-        // Your content components will go here
+    headerContainer: {
+        width: '100%',
+        marginTop: 24
     },
 });

@@ -3,8 +3,10 @@ import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useRef, useState } from 'react';
 import {
+    Alert,
     Dimensions,
     Image,
+    Share,
     StyleSheet,
     TouchableOpacity,
     View
@@ -12,8 +14,8 @@ import {
 import Carousel from 'react-native-snap-carousel-new';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.7; // Slightly smaller to show prev/next cards clearly
-const CARD_HEIGHT = 380;
+const CARD_WIDTH = width * 0.7;
+const CARD_HEIGHT = 310;
 const SLIDER_WIDTH = width;
 
 import { LogBox } from 'react-native';
@@ -27,7 +29,8 @@ export default function ReaderSlider() {
     const { colors } = useTheme();
     const [likedItems, setLikedItems] = useState({});
     const [bookmarkedItems, setBookmarkedItems] = useState({});
-    const [activeIndex, setActiveIndex] = useState(1); // Start with middle card (index 1)
+    const [likeCounts, setLikeCounts] = useState({});
+    const [activeIndex, setActiveIndex] = useState(2);
     const carouselRef = useRef(null);
 
     // Sample data - replace with your actual data
@@ -89,10 +92,17 @@ export default function ReaderSlider() {
         },
     ];
 
-    const toggleLike = (id) => {
+    const toggleLike = (id, currentLikes) => {
+        const newLikedState = !likedItems[id];
         setLikedItems(prev => ({
             ...prev,
-            [id]: !prev[id]
+            [id]: newLikedState
+        }));
+        
+        // Update like count
+        setLikeCounts(prev => ({
+            ...prev,
+            [id]: newLikedState ? (prev[id] || currentLikes) + 1 : (prev[id] || currentLikes) - 1
         }));
     };
 
@@ -101,14 +111,29 @@ export default function ReaderSlider() {
             ...prev,
             [id]: !prev[id]
         }));
+        
+        // Show feedback
+        if (!bookmarkedItems[id]) {
+            Alert.alert('Saved', 'Article bookmarked successfully!');
+        } else {
+            Alert.alert('Removed', 'Bookmark removed');
+        }
     };
 
-    const handleShare = (item) => {
-        console.log('Share:', item.title);
+    const handleShare = async (item) => {
+        try {
+            await Share.share({
+                message: `${item.title}\n\n${item.subtitle}\n\nRead more on HOPED app`,
+                title: 'Share Article'
+            });
+        } catch (error) {
+            console.log('Error sharing:', error);
+        }
     };
 
     const handleComment = (item) => {
-        console.log('Comments for:', item.title);
+        // Navigate to comments screen or show comments
+        Alert.alert('Comments', `Comments for ${item.title}\nTotal comments: ${item.comments}`);
     };
 
     const onSnapToItem = (index) => {
@@ -119,26 +144,40 @@ export default function ReaderSlider() {
         const isLiked = likedItems[item.id] || false;
         const isBookmarked = bookmarkedItems[item.id] || false;
         const isActive = index === activeIndex;
+        
+        // Get current like count (either updated or original)
+        const currentLikeCount = likeCounts[item.id] !== undefined 
+            ? likeCounts[item.id] 
+            : item.likes;
 
         return (
-            <TouchableOpacity
-                activeOpacity={0.95}
-                style={[
-                    styles.cardContainer,
-                    {
-                        backgroundColor: '#FFFFFF',
-                        shadowColor: '#000',
-                        // Make active card stand out more
-                        transform: [
-                            { scale: isActive ? 1 : 0.95 }
-                        ]
-                    }
-                ]}
+            <View style={[
+                styles.cardContainer,
+                {
+                    backgroundColor: '#FFFFFF',
+                    shadowColor: '#000',
+                    transform: [
+                        { scale: isActive ? 1 : 0.95 }
+                    ]
+                }
+            ]}
             >
                 <Image
                     source={{ uri: item.image }}
                     style={styles.cardImage}
                 />
+
+                {/* Bookmark at top right */}
+                <TouchableOpacity 
+                    style={styles.bookmarkButton}
+                    onPress={() => toggleBookmark(item.id)}
+                >
+                    <Ionicons
+                        name={isBookmarked ? "bookmark" : "bookmark-outline"}
+                        size={24}
+                        color={isBookmarked ? "#4B59B3" : "#FFFFFF"}
+                    />
+                </TouchableOpacity>
 
                 <View style={[styles.categoryBadge, { backgroundColor: '#4B59B3' }]}>
                     <ThemedText style={styles.categoryText}>{item.category}</ThemedText>
@@ -162,33 +201,44 @@ export default function ReaderSlider() {
                         </View>
 
                         <View style={styles.actionIcons}>
-                            <TouchableOpacity onPress={() => toggleLike(item.id)}>
+                            {/* Like button with count */}
+                            <TouchableOpacity 
+                                style={styles.actionButton}
+                                onPress={() => toggleLike(item.id, item.likes)}
+                            >
                                 <Ionicons
-                                    name={isLiked ? "heart" : "heart-outline"}
+                                    name={isLiked ? "thumbs-up" : "thumbs-up-outline"}
                                     size={18}
-                                    color={isLiked ? "#FF3B30" : "#666"}
+                                    color={isLiked ? "#4B59B3" : "#666"}
                                 />
+                                <ThemedText style={[
+                                    styles.actionText,
+                                    { color: isLiked ? "#4B59B3" : "#666" }
+                                ]}>
+                                    {currentLikeCount}
+                                </ThemedText>
                             </TouchableOpacity>
 
-                            <TouchableOpacity onPress={() => handleComment(item)}>
+                            {/* Comment button with count */}
+                            <TouchableOpacity 
+                                style={styles.actionButton}
+                                onPress={() => handleComment(item)}
+                            >
                                 <Ionicons name="chatbubble-outline" size={18} color="#666" />
+                                <ThemedText style={styles.actionText}>{item.comments}</ThemedText>
                             </TouchableOpacity>
 
-                            <TouchableOpacity onPress={() => toggleBookmark(item.id)}>
-                                <Ionicons
-                                    name={isBookmarked ? "bookmark" : "bookmark-outline"}
-                                    size={18}
-                                    color={isBookmarked ? "#4B59B3" : "#666"}
-                                />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity onPress={() => handleShare(item)}>
+                            {/* Share button */}
+                            <TouchableOpacity 
+                                style={styles.actionButton}
+                                onPress={() => handleShare(item)}
+                            >
                                 <Ionicons name="share-social-outline" size={18} color="#666" />
                             </TouchableOpacity>
                         </View>
                     </View>
                 </View>
-            </TouchableOpacity>
+            </View>
         );
     };
 
@@ -203,14 +253,14 @@ export default function ReaderSlider() {
                 layout="default"
                 loop={true}
                 autoplay={true}
-                inactiveSlideScale={1} // Make side cards smaller
-                inactiveSlideOpacity={0.9} // Make side cards more transparent
+                inactiveSlideScale={0.9}
+                inactiveSlideOpacity={0.7}
                 activeSlideAlignment="center"
                 containerCustomStyle={styles.carouselContainer}
                 contentContainerCustomStyle={styles.carouselContent}
                 removeClippedSubviews={false}
                 onSnapToItem={onSnapToItem}
-                firstItem={2} // Start with middle card (index 2 of 5 items)
+                firstItem={2}
                 enableSnap={true}
                 useScrollView={true}
                 scrollEnabled={true}
@@ -221,7 +271,7 @@ export default function ReaderSlider() {
             />
             
             {/* Pagination Dots */}
-            <View style={styles.paginationContainer}>
+            {/* <View style={styles.paginationContainer}>
                 {articles.map((_, index) => (
                     <View
                         key={index}
@@ -234,7 +284,7 @@ export default function ReaderSlider() {
                         ]}
                     />
                 ))}
-            </View>
+            </View> */}
         </ThemedView>
     );
 }
@@ -242,7 +292,9 @@ export default function ReaderSlider() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        marginVertical: 16,
+        // marginVertical: 16,
+        marginTop: -10,
+        // marginBottom: 20
     },
     carouselContainer: {
         flexGrow: 1,
@@ -264,6 +316,15 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 140,
         resizeMode: 'cover',
+    },
+    bookmarkButton: {
+        position: 'absolute',
+        top: 12,
+        right: 12,
+        zIndex: 10,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        borderRadius: 20,
+        padding: 6,
     },
     categoryBadge: {
         position: 'absolute',
@@ -295,7 +356,7 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '500',
         fontFamily: 'CoFoRaffineMedium',
-        marginBottom: 4,
+        marginBottom: 0,
         color: '#333',
         lineHeight: 16,
     },
@@ -326,7 +387,17 @@ const styles = StyleSheet.create({
     actionIcons: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: 16,
+    },
+    actionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    actionText: {
+        fontSize: 11,
+        fontFamily: 'tenez',
+        color: '#666',
     },
     paginationContainer: {
         flexDirection: 'row',
