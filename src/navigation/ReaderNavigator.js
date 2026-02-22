@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useTheme } from '../context/ThemeContext';
 import ReaderHome from '../screens/Reader/ReaderHome/ReaderHome';
 import SearchResults from '../screens/Reader/ReaderHome/SearchResults';
+import StoryDetail from '../screens/Reader/ReaderHome/StoreDetail';
 // import ReaderProfile from '../screens/Reader/ReaderProfile';
 // Import other reader screens
 
@@ -27,6 +28,11 @@ export default function ReaderNavigator() {
             }}>
             <Stack.Screen name="ReaderHome" component={ReaderHome} />
             <Stack.Screen name="SearchResults" component={SearchResults} />
+            <Stack.Screen
+                name="StoryDetail"
+                component={StoryDetail}
+                options={{ headerShown: false }}
+            />
             {/* <Stack.Screen name="ReaderProfile" component={ReaderProfile} /> */}
             {/* Add more reader screens */}
         </Stack.Navigator>
