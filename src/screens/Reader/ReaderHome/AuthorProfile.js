@@ -3,8 +3,10 @@ import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
+    Alert,
     FlatList,
     Image,
+    Modal,
     ScrollView,
     StyleSheet,
     TouchableOpacity,
@@ -15,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function AuthorProfile({ route, navigation }) {
     const { colors } = useTheme();
     const [activeTab, setActiveTab] = useState('Stories');
+    const [menuVisible, setMenuVisible] = useState(false);
 
     // Mock author data
     const author = {
@@ -82,6 +85,24 @@ export default function AuthorProfile({ route, navigation }) {
         },
     ];
 
+    const handleMenuOption = (option) => {
+        setMenuVisible(false);
+        switch(option) {
+            case 'follow':
+                Alert.alert('Follow', `You are now following ${author.name}`);
+                break;
+            case 'feedback':
+                Alert.alert('Give Feedback', 'Thank you for your feedback!');
+                break;
+            case 'report':
+                Alert.alert('Report', 'Thank you for reporting. We will review this profile.');
+                break;
+            case 'block':
+                Alert.alert('Block', `You have blocked ${author.name}`);
+                break;
+        }
+    };
+
     const renderStoryItem = ({ item }) => (
         <TouchableOpacity style={styles.storyItem}>
             <Image source={{ uri: item.image }} style={styles.storyImage} />
@@ -95,13 +116,15 @@ export default function AuthorProfile({ route, navigation }) {
     return (
         <ThemedView style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
-                {/* Header with Back Button */}
+                {/* Header with Back Button and 3-dot Menu */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <Ionicons name="arrow-back" size={24} color="#000" />
                     </TouchableOpacity>
                     <ThemedText style={styles.headerTitle}>Author Profile</ThemedText>
-                    <View style={{ width: 40 }} />
+                    <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuButton}>
+                        <Ionicons name="ellipsis-vertical" size={24} color="#000" />
+                    </TouchableOpacity>
                 </View>
 
                 <ScrollView showsVerticalScrollIndicator={false}>
@@ -123,6 +146,25 @@ export default function AuthorProfile({ route, navigation }) {
 
                         {/* Author Bio */}
                         <ThemedText style={styles.authorBio}>{author.bio}</ThemedText>
+
+                        {/* Follow and Feedback Buttons */}
+                        <View style={styles.actionButtonsContainer}>
+                            <TouchableOpacity 
+                                style={styles.followButton}
+                                onPress={() => Alert.alert('Follow', `You are now following ${author.name}`)}
+                            >
+                                <Ionicons name="person-add-outline" size={18} color="#FFFFFF" />
+                                <ThemedText style={styles.followButtonText}>Follow author</ThemedText>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity 
+                                style={styles.feedbackButton}
+                                onPress={() => Alert.alert('Give Feedback', 'Thank you for your feedback!')}
+                            >
+                                <Ionicons name="chatbubble-outline" size={18} color="#4B59B3" />
+                                <ThemedText style={styles.feedbackButtonText}>Give feedback</ThemedText>
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     {/* Stories | Podcasts Tabs */}
@@ -171,6 +213,60 @@ export default function AuthorProfile({ route, navigation }) {
                         </View>
                     )}
                 </ScrollView>
+
+                {/* Three Dot Menu Modal */}
+                <Modal
+                    visible={menuVisible}
+                    transparent={true}
+                    animationType="fade"
+                    onRequestClose={() => setMenuVisible(false)}
+                >
+                    <TouchableOpacity 
+                        style={styles.modalOverlay}
+                        activeOpacity={1}
+                        onPress={() => setMenuVisible(false)}
+                    >
+                        <View style={[styles.menuContainer, { backgroundColor: '#FFFFFF' }]}>
+                            <TouchableOpacity 
+                                style={styles.menuItem}
+                                onPress={() => handleMenuOption('follow')}
+                            >
+                                <Ionicons name="person-add-outline" size={20} color="#000" />
+                                <ThemedText style={styles.menuText}>Follow Author</ThemedText>
+                            </TouchableOpacity>
+                            
+                            <View style={styles.menuDivider} />
+                            
+                            <TouchableOpacity 
+                                style={styles.menuItem}
+                                onPress={() => handleMenuOption('feedback')}
+                            >
+                                <Ionicons name="chatbubble-outline" size={20} color="#000" />
+                                <ThemedText style={styles.menuText}>Give Feedback</ThemedText>
+                            </TouchableOpacity>
+                            
+                            <View style={styles.menuDivider} />
+                            
+                            <TouchableOpacity 
+                                style={styles.menuItem}
+                                onPress={() => handleMenuOption('report')}
+                            >
+                                <Ionicons name="flag-outline" size={20} color="#000" />
+                                <ThemedText style={styles.menuText}>Report Author</ThemedText>
+                            </TouchableOpacity>
+                            
+                            <View style={styles.menuDivider} />
+                            
+                            <TouchableOpacity 
+                                style={[styles.menuItem, styles.blockItem]}
+                                onPress={() => handleMenuOption('block')}
+                            >
+                                <Ionicons name="ban-outline" size={20} color="#FF3B30" />
+                                <ThemedText style={[styles.menuText, styles.blockText]}>Block Author</ThemedText>
+                            </TouchableOpacity>
+                        </View>
+                    </TouchableOpacity>
+                </Modal>
             </SafeAreaView>
         </ThemedView>
     );
@@ -201,6 +297,12 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    menuButton: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     headerTitle: {
         fontSize: 18,
         fontWeight: '400',
@@ -214,7 +316,7 @@ const styles = StyleSheet.create({
     },
     profileInfoContainer: {
         paddingHorizontal: 16,
-        paddingTop: 40, // Space for overlapping profile image
+        paddingTop: 40,
         paddingBottom: 24,
         borderBottomWidth: 1,
         borderBottomColor: '#F0F0F0',
@@ -247,19 +349,49 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
-        // marginBottom: 4,
-    },
-    formerTitle: {
-        fontSize: 14,
-        fontFamily: 'tenez',
-        color: '#4B59B3',
-        letterSpacing: 0.5,
     },
     authorBio: {
         fontSize: 14,
         fontFamily: 'tenez',
         color: '#666',
         lineHeight: 20,
+        marginBottom: 16,
+    },
+    actionButtonsContainer: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    followButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#4B59B3',
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        gap: 8,
+    },
+    followButtonText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontFamily: 'CoFoRaffineMedium',
+    },
+    feedbackButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F0F0F0',
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        gap: 8,
+    },
+    feedbackButtonText: {
+        color: '#4B59B3',
+        fontSize: 14,
+        fontFamily: 'CoFoRaffineMedium',
     },
     tabsContainer: {
         flexDirection: 'row',
@@ -324,5 +456,39 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontFamily: 'CoFoRaffineMedium',
         color: '#4B59B3',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    menuContainer: {
+        borderRadius: 12,
+        padding: 8,
+        width: '80%',
+        maxWidth: 300,
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        gap: 12,
+    },
+    menuText: {
+        fontSize: 16,
+        fontFamily: 'CoFoRaffineMedium',
+        color: '#000',
+    },
+    menuDivider: {
+        height: 1,
+        backgroundColor: '#F0F0F0',
+        marginHorizontal: 16,
+    },
+    blockItem: {
+        // No extra styling
+    },
+    blockText: {
+        color: '#FF3B30',
     },
 });
