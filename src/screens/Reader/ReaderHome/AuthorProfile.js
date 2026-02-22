@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function AuthorProfile({ route, navigation }) {
     const { colors } = useTheme();
     const [activeTab, setActiveTab] = useState('Stories');
-    
+
     // Mock author data
     const author = {
         id: '1',
@@ -118,7 +118,7 @@ export default function AuthorProfile({ route, navigation }) {
                         {/* Author Name and Former Title */}
                         <View style={styles.nameContainer}>
                             <ThemedText style={styles.authorName}>{author.name}</ThemedText>
-                            <ThemedText style={styles.formerTitle}>{author.formerTitle}</ThemedText>
+                            {/* <ThemedText style={styles.formerTitle}>{author.formerTitle}</ThemedText> */}
                         </View>
 
                         {/* Author Bio */}
@@ -127,7 +127,7 @@ export default function AuthorProfile({ route, navigation }) {
 
                     {/* Stories | Podcasts Tabs */}
                     <View style={styles.tabsContainer}>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={[styles.tab, activeTab === 'Stories' && styles.activeTab]}
                             onPress={() => setActiveTab('Stories')}
                         >
@@ -135,7 +135,7 @@ export default function AuthorProfile({ route, navigation }) {
                                 Stories
                             </ThemedText>
                         </TouchableOpacity>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={[styles.tab, activeTab === 'Podcasts' && styles.activeTab]}
                             onPress={() => setActiveTab('Podcasts')}
                         >
@@ -240,13 +240,14 @@ const styles = StyleSheet.create({
     },
     nameContainer: {
         marginBottom: 12,
+        marginTop: 8
     },
     authorName: {
         fontSize: 24,
         fontWeight: '600',
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
-        marginBottom: 4,
+        // marginBottom: 4,
     },
     formerTitle: {
         fontSize: 14,
@@ -297,6 +298,11 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderBottomWidth: 1,
         borderBottomColor: '#F0F0F0',
+        elevation: 1,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 8,
+        padding: 8,
+        marginBottom: 8
     },
     storyImage: {
         width: 60,

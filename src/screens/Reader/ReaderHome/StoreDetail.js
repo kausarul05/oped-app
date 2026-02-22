@@ -496,11 +496,14 @@ export default function StoryDetail({ route, navigation }) {
                     </View>
 
                     {/* Author Info at Bottom */}
-                    <View style={styles.bottomAuthorSection}>
+                    <TouchableOpacity
+                        style={styles.bottomAuthorSection}
+                        onPress={() => navigation.navigate('AuthorProfile', { authorId: '1' })}
+                    >
                         <ThemedText style={styles.sectionTitle}>Author</ThemedText>
                         <View style={[styles.bottomAuthorCard, { elevation: 2, backgroundColor: colors.card, padding: 8, borderRadius: 12 }]}>
                             <View>
-                                <View style={{flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8}}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                                     <Image source={{ uri: story.authorImage }} style={styles.bottomAuthorImage} />
                                     <ThemedText style={styles.bottomAuthorName}>{story.authorName}</ThemedText>
                                 </View>
@@ -509,7 +512,7 @@ export default function StoryDetail({ route, navigation }) {
                                 </View>
                             </View>
                         </View>
-                    </View>
+                    </TouchableOpacity>
 
                     {/* Related Keywords */}
                     <View style={styles.keywordsSection}>

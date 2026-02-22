@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useTheme } from '../context/ThemeContext';
+import AuthorProfile from '../screens/Reader/ReaderHome/AuthorProfile';
 import ReaderHome from '../screens/Reader/ReaderHome/ReaderHome';
 import SearchResults from '../screens/Reader/ReaderHome/SearchResults';
 import StoryDetail from '../screens/Reader/ReaderHome/StoreDetail';
@@ -31,6 +32,11 @@ export default function ReaderNavigator() {
             <Stack.Screen
                 name="StoryDetail"
                 component={StoryDetail}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="AuthorProfile"
+                component={AuthorProfile}
                 options={{ headerShown: false }}
             />
             {/* <Stack.Screen name="ReaderProfile" component={ReaderProfile} /> */}
