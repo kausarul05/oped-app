@@ -10,7 +10,7 @@ import SignUp from '../screens/Auth/SignUp';
 import Verification from '../screens/Auth/Verification';
 import SliderStory from '../screens/Home/SliderStory/SliderStory';
 import SplashScreen from '../screens/Splash/SplashScreen';
-import ReaderNavigator from './ReaderNavigator';
+import BottomTabNavigator from './BottomTabNavigator';
 import WriterNavigator from './WriterNavigator';
 
 const Stack = createNativeStackNavigator();
@@ -29,7 +29,7 @@ export default function RootNavigator() {
 
     // If user is logged in, navigate to role-based screen
     if (userRole) {
-        return userRole === 'reader' ? <ReaderNavigator /> : <WriterNavigator />;
+        return userRole === 'reader' ? <BottomTabNavigator /> : <WriterNavigator />;
     }
     return (
         <Stack.Navigator
