@@ -359,7 +359,7 @@ export default function InboxHome({ navigation }) {
                 <View style={styles.newsletterSection}>
                     <View style={styles.newsletterHeader}>
                         <ThemedText style={styles.newsletterTitle}>Your Newsletters</ThemedText>
-                        <TouchableOpacity onPress={() => Alert.alert('Newsletters', 'See all newsletters')}>
+                        <TouchableOpacity onPress={() => navigation.navigate('Newsletter')}>
                             <ThemedText style={styles.newsletterSeeAll}>See All &gt;</ThemedText>
                         </TouchableOpacity>
                     </View>
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
         elevation: 1,
         marginBottom: 24,
         borderRadius: 12,
-        padding: 8
+        padding: 12
     },
     storyHeader: {
         flexDirection: 'row',
