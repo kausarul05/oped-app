@@ -1,10 +1,12 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function ReaderQuickLink() {
     const { colors } = useTheme();
+    const navigation = useNavigation();
 
     const quickLinks = [
         {
@@ -42,8 +44,14 @@ export default function ReaderQuickLink() {
     ];
 
     const handlePress = (item) => {
-        console.log('Pressed:', item.title);
-        // Navigate to respective screen
+        if (item.title === 'Discover') {
+            navigation.navigate('DiscoverQuickLink');
+        } else if(item.title === "Top Stories") {
+            navigation.navigate('CategoryStories', { category: 'Top Stories' });
+        } else {
+            console.log('Pressed:', item.title);
+            // Handle other quick links
+        }
     };
 
     return (

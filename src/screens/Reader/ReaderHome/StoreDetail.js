@@ -100,7 +100,7 @@ export default function StoryDetail({ route, navigation }) {
         postDate: '22 Jan, 2020',
         authorImage: 'https://randomuser.me/api/portraits/women/1.jpg',
         coverImage: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism...',
+        headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism',
         summary: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told, shared, and trusted the world.',
         shortContent: `
             <h1>The Future of Digital Media and the Changing Voice of Independent Journalism</h1>
@@ -136,8 +136,8 @@ export default function StoryDetail({ route, navigation }) {
     // HTML styles with proper font families for headings
     const htmlStyles = {
         h1: {
-            fontSize: 24,
-            fontWeight: '400',
+            fontSize: 18,
+            fontWeight: '700',
             fontFamily: 'CoFoRaffineBold',
             color: '#000',
             lineHeight: 32,
@@ -145,8 +145,8 @@ export default function StoryDetail({ route, navigation }) {
             marginTop: 8,
         },
         h2: {
-            fontSize: 20,
-            fontWeight: '400',
+            fontSize: 18,
+            fontWeight: '700',
             fontFamily: 'CoFoRaffineBold',
             color: '#000',
             lineHeight: 28,
@@ -402,7 +402,7 @@ export default function StoryDetail({ route, navigation }) {
                     </View>
 
                     {/* Author Section - At the top (after summary) */}
-                    <View style={styles.authorSection}>
+                    <TouchableOpacity style={styles.authorSection} onPress={() => navigation.navigate('AuthorProfile', { author: story.author })}>
                         <View style={styles.authorCard}>
                             <View style={styles.authorInfo}>
                                 <ThemedText style={styles.authorName}>{story.authorName}</ThemedText>
@@ -410,7 +410,7 @@ export default function StoryDetail({ route, navigation }) {
                             </View>
                             <Image source={{ uri: story.authorImage }} style={styles.authorLargeImage} />
                         </View>
-                    </View>
+                    </TouchableOpacity>
 
                     {/* HTML Content - with proper font family for headings */}
                     <View style={styles.htmlContentArea}>
@@ -501,7 +501,7 @@ export default function StoryDetail({ route, navigation }) {
                         onPress={() => navigation.navigate('AuthorProfile', { authorId: '1' })}
                     >
                         <ThemedText style={styles.sectionTitle}>Author</ThemedText>
-                        <View style={[styles.bottomAuthorCard, { elevation: 2, backgroundColor: colors.card, padding: 8, borderRadius: 12 }]}>
+                        <View style={[styles.bottomAuthorCard, { elevation: 1, padding: 8, borderRadius: 12 }]}>
                             <View>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                                     <Image source={{ uri: story.authorImage }} style={styles.bottomAuthorImage} />
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
         resizeMode: 'cover',
     },
     pageHeadline: {
-        fontSize: 26,
+        fontSize: 22,
         fontWeight: '400',
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
@@ -804,6 +804,7 @@ const styles = StyleSheet.create({
     bottomAuthorCard: {
         flexDirection: 'row',
         gap: 16,
+        backgroundColor: "#ffff"
     },
     bottomAuthorImage: {
         width: 60,
