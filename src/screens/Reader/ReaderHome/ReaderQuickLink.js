@@ -46,7 +46,9 @@ export default function ReaderQuickLink() {
     const handlePress = (item) => {
         if (item.title === 'Discover') {
             navigation.navigate('DiscoverQuickLink');
-        } else if(item.title === "Top Stories") {
+        } else if (item.title === 'LIVE') {
+            navigation.navigate('LiveNews');
+        } else if (item.title === "Top Stories") {
             navigation.navigate('CategoryStories', { category: 'Top Stories' });
         } else {
             console.log('Pressed:', item.title);

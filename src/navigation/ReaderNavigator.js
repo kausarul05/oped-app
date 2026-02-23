@@ -3,6 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 import AuthorProfile from '../screens/Reader/ReaderHome/AuthorProfile';
 import CategoryStories from '../screens/Reader/ReaderHome/CategoryStories';
 import DiscoverQuickLink from '../screens/Reader/ReaderHome/DiscoverQuickLink';
+import LiveNews from '../screens/Reader/ReaderHome/LiveNews';
 import ReaderHome from '../screens/Reader/ReaderHome/ReaderHome';
 import SearchResults from '../screens/Reader/ReaderHome/SearchResults';
 import StoryDetail from '../screens/Reader/ReaderHome/StoreDetail';
@@ -49,6 +50,11 @@ export default function ReaderNavigator() {
             <Stack.Screen
                 name="CategoryStories"
                 component={CategoryStories}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="LiveNews"
+                component={LiveNews}
                 options={{ headerShown: false }}
             />
             {/* <Stack.Screen name="ReaderProfile" component={ReaderProfile} /> */}
