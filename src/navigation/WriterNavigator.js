@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 // import WriterDashboard from '../screens/Writer/WriterDashboard';
 import WriterHome from '../screens/Writer/WriterHome/WriterHome';
+import WriterStoreDetail from '../screens/Writer/WriterHome/WriterStoreDetail';
 // Import other writer screens
 
 const Stack = createNativeStackNavigator();
@@ -12,6 +13,7 @@ export default function WriterNavigator() {
                 headerShown: false,
             }}>
             <Stack.Screen name="WriterHome" component={WriterHome} />
+            <Stack.Screen name="WriterStoreDetail" component={WriterStoreDetail} />
             {/* <Stack.Screen name="WriterDashboard" component={WriterDashboard} /> */}
             {/* Add more writer screens */}
         </Stack.Navigator>

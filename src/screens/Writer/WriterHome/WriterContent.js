@@ -1,6 +1,7 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Foundation, Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -14,7 +15,7 @@ import {
 } from 'react-native';
 
 
-export default function WriterContent({ navigation }) {
+export default function WriterContent() {
     const { colors } = useTheme();
     const [activeTab, setActiveTab] = useState('Articles');
     const [likedItems, setLikedItems] = useState({});
@@ -23,6 +24,7 @@ export default function WriterContent({ navigation }) {
     const [shareCounts, setShareCounts] = useState({});
     const [menuVisible, setMenuVisible] = useState(null);
     const [selectedItem, setSelectedItem] = useState(null);
+    const navigation = useNavigation()
 
     // Writer data
     const writer = {
@@ -237,7 +239,7 @@ export default function WriterContent({ navigation }) {
 
     const getDisplayLikes = (item) => {
         if (likeCounts[item.id]) {
-            return likeCounts[item.id] > 1000000 
+            return likeCounts[item.id] > 1000000
                 ? (likeCounts[item.id] / 1000000).toFixed(1) + 'M'
                 : likeCounts[item.id] > 1000
                     ? (likeCounts[item.id] / 1000).toFixed(1) + 'K'
@@ -249,7 +251,7 @@ export default function WriterContent({ navigation }) {
     const getDisplayComments = (item) => {
         if (commentCounts[item.id]) {
             const total = item.comments + commentCounts[item.id];
-            return total > 1000 
+            return total > 1000
                 ? (total / 1000).toFixed(1) + 'K'
                 : total.toString();
         }
@@ -267,63 +269,68 @@ export default function WriterContent({ navigation }) {
         const isLiked = likedItems[item.id] || false;
 
         return (
-            <View key={item.id} style={styles.contentItem}>
-                <View style={styles.contentTextContainer}>
-                    <ThemedText style={styles.contentTitle}>{item.title}</ThemedText>
-                    <ThemedText style={styles.contentDescription} numberOfLines={1}>
-                        {item.description}
-                    </ThemedText>
+            <TouchableOpacity onPress={() => navigation.navigate('WriterStoreDetail')} key={item.id} style={{
+                backgroundColor: '#fff', elevation: 1, padding: 12, borderRadius: 8, borderBottomWidth: 1,
+                borderBottomColor: '#F0F0F0',
+            }}>
+                <View style={styles.contentItem}>
+                    <View style={styles.contentTextContainer}>
+                        <ThemedText style={styles.contentTitle}>{item.title}</ThemedText>
+                        <ThemedText style={styles.contentDescription} numberOfLines={1}>
+                            {item.description}
+                        </ThemedText>
 
-                    {/* Read More Button */}
-                    <TouchableOpacity style={styles.readMoreButton}>
-                        <ThemedText style={styles.readMoreText}>Read More</ThemedText>
-                    </TouchableOpacity>
-
-                    {/* Stats Section with 3-dot */}
-                    <View style={styles.statsRow}>
-                        <View style={styles.statsContainer}>
-                            <TouchableOpacity 
-                                style={styles.statItem}
-                                onPress={() => toggleLike(item.id, item.likes)}
-                            >
-                                <Foundation 
-                                    name="like" 
-                                    size={16} 
-                                    color={isLiked ? "#4B59B3" : "#999"} 
-                                />
-                                <ThemedText style={[styles.statText, isLiked && { color: '#4B59B3' }]}>
-                                    {getDisplayLikes(item)}
-                                </ThemedText>
-                            </TouchableOpacity>
-                            
-                            <TouchableOpacity 
-                                style={styles.statItem}
-                                onPress={() => handleComment(item)}
-                            >
-                                <Ionicons name="chatbubble-outline" size={16} color="#999" />
-                                <ThemedText style={styles.statText}>
-                                    {getDisplayComments(item)}
-                                </ThemedText>
-                            </TouchableOpacity>
-                            
-                            <TouchableOpacity 
-                                style={styles.statItem}
-                                onPress={() => handleShare(item)}
-                            >
-                                <Ionicons name="share-social-outline" size={16} color="#999" />
-                                <ThemedText style={styles.statText}>
-                                    {getDisplayShares(item)}
-                                </ThemedText>
-                            </TouchableOpacity>
-                        </View>
-
-                        <TouchableOpacity onPress={() => handleThreeDotPress(item.id)}>
-                            <Ionicons name="ellipsis-vertical" size={16} color="#999" />
+                        {/* Read More Button */}
+                        <TouchableOpacity style={styles.readMoreButton}>
+                            <ThemedText style={styles.readMoreText}>Read More</ThemedText>
                         </TouchableOpacity>
                     </View>
+                    <Image source={{ uri: item.image }} style={styles.contentImage} />
                 </View>
-                <Image source={{ uri: item.image }} style={styles.contentImage} />
-            </View>
+
+                {/* Stats Section with 3-dot */}
+                <View style={styles.statsRow}>
+                    <View style={styles.statsContainer}>
+                        <TouchableOpacity
+                            style={styles.statItem}
+                            onPress={() => toggleLike(item.id, item.likes)}
+                        >
+                            <Foundation
+                                name="like"
+                                size={16}
+                                color={isLiked ? "#4B59B3" : "#999"}
+                            />
+                            <ThemedText style={[styles.statText, isLiked && { color: '#4B59B3' }]}>
+                                {getDisplayLikes(item)}
+                            </ThemedText>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.statItem}
+                            onPress={() => handleComment(item)}
+                        >
+                            <Ionicons name="chatbubble-outline" size={16} color="#999" />
+                            <ThemedText style={styles.statText}>
+                                {getDisplayComments(item)}
+                            </ThemedText>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.statItem}
+                            onPress={() => handleShare(item)}
+                        >
+                            <Ionicons name="share-social-outline" size={16} color="#999" />
+                            <ThemedText style={styles.statText}>
+                                {getDisplayShares(item)}
+                            </ThemedText>
+                        </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity onPress={() => handleThreeDotPress(item.id)}>
+                        <Ionicons name="ellipsis-horizontal" size={16} color="#999" />
+                    </TouchableOpacity>
+                </View>
+            </TouchableOpacity>
         );
     };
 
@@ -347,21 +354,21 @@ export default function WriterContent({ navigation }) {
                     {/* Stats Section with 3-dot */}
                     <View style={styles.statsRow}>
                         <View style={styles.statsContainer}>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.statItem}
                                 onPress={() => toggleLike(item.id, item.likes)}
                             >
-                                <Foundation 
-                                    name="like" 
-                                    size={16} 
-                                    color={isLiked ? "#4B59B3" : "#999"} 
+                                <Foundation
+                                    name="like"
+                                    size={16}
+                                    color={isLiked ? "#4B59B3" : "#999"}
                                 />
                                 <ThemedText style={[styles.statText, isLiked && { color: '#4B59B3' }]}>
                                     {getDisplayLikes(item)}
                                 </ThemedText>
                             </TouchableOpacity>
-                            
-                            <TouchableOpacity 
+
+                            <TouchableOpacity
                                 style={styles.statItem}
                                 onPress={() => handleComment(item)}
                             >
@@ -370,8 +377,8 @@ export default function WriterContent({ navigation }) {
                                     {getDisplayComments(item)}
                                 </ThemedText>
                             </TouchableOpacity>
-                            
-                            <TouchableOpacity 
+
+                            <TouchableOpacity
                                 style={styles.statItem}
                                 onPress={() => handleShare(item)}
                             >
@@ -497,7 +504,7 @@ export default function WriterContent({ navigation }) {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
+        // flex: 1,
         backgroundColor: '#FFFFFF',
     },
     scrollContent: {
@@ -536,22 +543,25 @@ const styles = StyleSheet.create({
     },
     tabsContainer: {
         flexDirection: 'row',
-        justifyContent: 'center',
+        justifyContent: 'space-around',
         paddingHorizontal: 16,
         paddingVertical: 16,
         gap: 24,
     },
     tab: {
+        flex: 1,
         paddingBottom: 4,
+        marginBottom: 10
     },
     activeTab: {
         borderBottomWidth: 2,
         borderBottomColor: '#4B59B3',
     },
     tabText: {
-        fontSize: 16,
-        fontFamily: 'CoFoRaffineMedium',
+        fontSize: 18,
+        fontFamily: 'CoFoRaffineBold',
         color: '#999',
+        textAlign: 'center'
     },
     activeTabText: {
         color: '#4B59B3',
@@ -565,12 +575,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 12,
         paddingBottom: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-        elevation: 1,
-        padding: 8,
-        borderRadius: 8,
-        backgroundColor: '#fff'
+        // borderBottomWidth: 1,
+        // borderBottomColor: '#F0F0F0',
+        // elevation: 1,
+        // padding: 8,
+        // borderRadius: 8,
+        // backgroundColor: '#fff'
     },
     contentImage: {
         width: 100,
