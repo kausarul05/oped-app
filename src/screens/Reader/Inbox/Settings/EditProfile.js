@@ -378,6 +378,6 @@ const styles = StyleSheet.create({
         // marginHorizontal: 16,
         marginTop: 30,
         marginBottom: 20,
-        paddingHorizontal : 20
+        paddingHorizontal : 16
     },
 });
