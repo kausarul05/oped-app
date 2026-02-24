@@ -1,4 +1,5 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
+import { useRole } from '@/src/context/RoleContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -15,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Profile({ navigation }) {
     const { colors } = useTheme();
+    const { clearUserRole } = useRole();
     const [profileImage, setProfileImage] = useState(null);
 
     // User data
@@ -31,8 +33,21 @@ export default function Profile({ navigation }) {
                 { text: 'Cancel', style: 'cancel' },
                 { 
                     text: 'Logout', 
-                    onPress: () => {
-                        Alert.alert('Logged Out', 'You have been logged out successfully');
+                    onPress: async () => {
+                        try {
+                            // Clear user role from AsyncStorage
+                            await clearUserRole();
+                            
+                            // Navigate to Login screen
+                            // We need to reset the navigation stack to Auth
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'login' }],
+                            });
+                        } catch (error) {
+                            console.error('Logout error:', error);
+                            Alert.alert('Error', 'Failed to logout. Please try again.');
+                        }
                     },
                     style: 'destructive'
                 }
@@ -135,7 +150,7 @@ export default function Profile({ navigation }) {
 
                         <TouchableOpacity 
                             style={styles.menuItem}
-                            onPress={() => handleNavigation('Premium')}
+                            onPress={() => handleNavigation('Subscription')}
                         >
                             <View style={styles.menuItemLeft}>
                                 <Ionicons name="star-outline" size={20} color="#666" />
