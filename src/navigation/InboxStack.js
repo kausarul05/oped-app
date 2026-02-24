@@ -7,6 +7,7 @@ import Newsletter from '../screens/Reader/Inbox/Newsletter';
 import ReadLater from '../screens/Reader/Inbox/ReadLater';
 import Saved from '../screens/Reader/Inbox/Saved';
 import StoryDetail from '../screens/Reader/ReaderHome/StoreDetail';
+import ProfileStack from './ProfileStack';
 // import Notifications from '../screens/Inbox/Notifications';
 
 const Stack = createNativeStackNavigator();
@@ -25,6 +26,7 @@ export default function InboxStack() {
              <Stack.Screen name="Library" component={Library} />
              <Stack.Screen name="ReadLater" component={ReadLater} />
             <Stack.Screen name="Saved" component={Saved} />
+            <Stack.Screen name="Profile" component={ProfileStack} />
             {/* <Stack.Screen name="ChatDetail" component={ChatDetail} />
             <Stack.Screen name="Notifications" component={Notifications} /> */}
         </Stack.Navigator>

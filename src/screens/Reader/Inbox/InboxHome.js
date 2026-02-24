@@ -347,7 +347,7 @@ export default function InboxHome({ navigation }) {
                 {/* Header */}
                 <View style={styles.header}>
                     <ThemedText style={styles.headerTitle}>Inbox</ThemedText>
-                    <View style={{flexDirection: 'row', gap: 8}}>
+                    <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
                         <TouchableOpacity
                             style={styles.composeButton}
                             onPress={() => navigation.navigate('Library')}
@@ -356,10 +356,13 @@ export default function InboxHome({ navigation }) {
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            style={styles.composeButton}
-                            onPress={() => Alert.alert('Compose', 'Open compose message')}
+                            style={styles.iconButton}
+                            onPress={() => navigation.navigate('Profile')}
                         >
-                            <MaterialCommunityIcons name="library-outline" size={24} color="black" />
+                            <Image
+                                source={{ uri: 'https://randomuser.me/api/portraits/men/1.jpg' }}
+                                style={styles.headerAvatar}
+                            />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -481,6 +484,19 @@ const styles = StyleSheet.create({
         height: 40,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    iconButton: {
+        width: 30,
+        height: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerAvatar: {
+        width: 30,
+        height: 30,
+        borderRadius: 20,
+        borderWidth: 2,
+        borderColor: '#4B59B3',
     },
     // Newsletter Section
     newsletterSection: {
