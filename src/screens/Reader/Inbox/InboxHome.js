@@ -1,6 +1,6 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
-import { Foundation, Ionicons } from '@expo/vector-icons';
+import { Foundation, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
     Alert,
@@ -151,8 +151,8 @@ export default function InboxHome({ navigation }) {
             `This post has ${post.commentCount}k comments. Would you like to add one?`,
             [
                 { text: 'Cancel', style: 'cancel' },
-                { 
-                    text: 'View Comments', 
+                {
+                    text: 'View Comments',
                     onPress: () => {
                         // Increment comment count when viewing comments
                         setCommentCounts(prev => ({
@@ -160,10 +160,10 @@ export default function InboxHome({ navigation }) {
                             [post.id]: (prev[post.id] || 0) + 1
                         }));
                         console.log('View comments');
-                    } 
+                    }
                 },
-                { 
-                    text: 'Add Comment', 
+                {
+                    text: 'Add Comment',
                     onPress: () => {
                         // Increment comment count when adding comment
                         setCommentCounts(prev => ({
@@ -171,7 +171,7 @@ export default function InboxHome({ navigation }) {
                             [post.id]: (prev[post.id] || 0) + 1
                         }));
                         Alert.alert('Add Comment', 'Comment added successfully!');
-                    } 
+                    }
                 },
             ]
         );
@@ -221,7 +221,7 @@ export default function InboxHome({ navigation }) {
     };
 
     const renderNewsletterItem = ({ item }) => (
-        <TouchableOpacity 
+        <TouchableOpacity
             style={styles.newsletterItem}
             onPress={() => navigation.navigate("InboxAuthProfile")}
         >
@@ -235,18 +235,18 @@ export default function InboxHome({ navigation }) {
 
     const renderStoryPost = ({ item }) => {
         const isLiked = likedPosts[item.id] || false;
-        
+
         // Get dynamic counts
-        const displayLikes = likeCounts[item.id] 
-            ? likeCounts[item.id].toFixed(1) + 'M' 
+        const displayLikes = likeCounts[item.id]
+            ? likeCounts[item.id].toFixed(1) + 'M'
             : item.stats.likes;
-        
-        const displayComments = commentCounts[item.id] 
-            ? (parseInt(item.stats.comments) + commentCounts[item.id]) + 'K' 
+
+        const displayComments = commentCounts[item.id]
+            ? (parseInt(item.stats.comments) + commentCounts[item.id]) + 'K'
             : item.stats.comments;
-        
-        const displayShares = shareCounts[item.id] 
-            ? parseInt(item.stats.shares) + shareCounts[item.id] 
+
+        const displayShares = shareCounts[item.id]
+            ? parseInt(item.stats.shares) + shareCounts[item.id]
             : item.stats.shares;
 
         return (
@@ -280,42 +280,42 @@ export default function InboxHome({ navigation }) {
 
                 {/* Stats Section - 91M    75K    851 */}
                 <View style={styles.storyStatsContainer}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.storyStatItem}
                         onPress={() => toggleLike(item.id, item.likeCount)}
                     >
-                        <Foundation 
-                            name="like" 
-                            size={16} 
-                            color={isLiked ? "#4B59B3" : "#666"} 
+                        <Foundation
+                            name="like"
+                            size={16}
+                            color={isLiked ? "#4B59B3" : "#666"}
                         />
                         <ThemedText style={[styles.storyStatText, isLiked && { color: '#4B59B3' }]}>
                             {displayLikes}
                         </ThemedText>
                     </TouchableOpacity>
-                    
-                    <TouchableOpacity 
+
+                    <TouchableOpacity
                         style={styles.storyStatItem}
                         onPress={() => handleComment(item)}
                     >
-                        <Ionicons 
-                            name="chatbubble-outline" 
-                            size={16} 
-                            color="#666" 
+                        <Ionicons
+                            name="chatbubble-outline"
+                            size={16}
+                            color="#666"
                         />
                         <ThemedText style={styles.storyStatText}>
                             {displayComments}
                         </ThemedText>
                     </TouchableOpacity>
-                    
-                    <TouchableOpacity 
+
+                    <TouchableOpacity
                         style={styles.storyStatItem}
                         onPress={() => handleShare(item)}
                     >
-                        <Ionicons 
-                            name="share-social-outline" 
-                            size={16} 
-                            color="#666" 
+                        <Ionicons
+                            name="share-social-outline"
+                            size={16}
+                            color="#666"
                         />
                         <ThemedText style={styles.storyStatText}>
                             {displayShares}
@@ -347,12 +347,21 @@ export default function InboxHome({ navigation }) {
                 {/* Header */}
                 <View style={styles.header}>
                     <ThemedText style={styles.headerTitle}>Inbox</ThemedText>
-                    <TouchableOpacity 
-                        style={styles.composeButton}
-                        onPress={() => Alert.alert('Compose', 'Open compose message')}
-                    >
-                        <Ionicons name="create-outline" size={24} color="#000" />
-                    </TouchableOpacity>
+                    <View style={{flexDirection: 'row', gap: 8}}>
+                        <TouchableOpacity
+                            style={styles.composeButton}
+                            onPress={() => navigation.navigate('Library')}
+                        >
+                            <MaterialCommunityIcons name="library-outline" size={24} color="black" />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.composeButton}
+                            onPress={() => Alert.alert('Compose', 'Open compose message')}
+                        >
+                            <MaterialCommunityIcons name="library-outline" size={24} color="black" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Your Newsletters Section */}
