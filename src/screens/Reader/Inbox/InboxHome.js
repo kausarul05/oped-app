@@ -223,13 +223,13 @@ export default function InboxHome({ navigation }) {
     const renderNewsletterItem = ({ item }) => (
         <TouchableOpacity 
             style={styles.newsletterItem}
-            onPress={() => Alert.alert('Newsletter', `Opening ${item.name} newsletter`)}
+            onPress={() => navigation.navigate("InboxAuthProfile")}
         >
             <Image source={{ uri: item.avatar }} style={styles.newsletterAvatar} />
-            <View style={styles.newsletterContent}>
+            {/* <View style={styles.newsletterContent}>
                 <ThemedText style={styles.newsletterName}>{item.name}</ThemedText>
                 <ThemedText style={styles.newsletterTime}>{item.time}</ThemedText>
-            </View>
+            </View> */}
         </TouchableOpacity>
     );
 
