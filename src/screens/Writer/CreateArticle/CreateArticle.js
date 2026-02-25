@@ -1,6 +1,6 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
     Alert,
@@ -66,7 +66,8 @@ export default function CreateArticle({ navigation }) {
                                 style={styles.podcastButton}
                                 onPress={() => handleTypeSelect('podcast')}
                             >
-                                <Ionicons name="mic-outline" size={20} color="#FF9500" />
+                                {/* <Ionicons style={{marginBottom: 10}} name="mic-outline" size={24} color="#000" />/ */}
+                                <FontAwesome5 style={{marginBottom: 10}} name="headphones" size={24} color="black" />
                                 <ThemedText style={styles.buttonText}>Add Podcast</ThemedText>
                             </TouchableOpacity>
                         </View>
@@ -133,6 +134,8 @@ const styles = StyleSheet.create({
     },
     liveSection: {
         flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
         backgroundColor: '#FF000008',
         borderRadius: 12,
         padding: 16,
@@ -141,16 +144,24 @@ const styles = StyleSheet.create({
         borderColor: '#FF00001A',
     },
     liveHeader: {
-        flexDirection: 'row',
+        // flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        marginBottom: 12,
+        // marginBottom: 12,
     },
     liveTitle: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
         fontFamily: 'CoFoRaffineBold',
-        color: '#000',
+        color: '#EE1F24',
+        marginTop: -8
+        // borderWidth: 1,
+        // borderColor: '#EE1F24',
+        // paddingHorizontal: 8,
+        // flexDirection: 'row',
+        // justifyContent: 'center',
+        // alignItems: 'center',
+        
     },
     liveButton: {
         paddingVertical: 8,
@@ -170,26 +181,29 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     buttonText: {
-        fontSize: 16,
+        fontSize: 18,
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
+        letterSpacing : 2
     },
     storyButton: {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        paddingVertical: 16,
+        paddingVertical: 26,
         marginTop: 8,
         borderTopWidth: 1,
-        borderTopColor: '#F0F0F0',
-        backgroundColor: '#9fa9f1',
+        borderTopColor: '#c5c4c4',
+        backgroundColor: '#ccd1fa',
         borderRadius: 8,
         elevation: 1
     },
     storyText: {
-        fontSize: 16,
+        fontSize: 18,
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
+        letterSpacing: 2,
+        paddingTop: 8
     },
 });
