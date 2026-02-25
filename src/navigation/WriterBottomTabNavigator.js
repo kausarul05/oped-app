@@ -3,6 +3,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import SavedDraftStack from './SavedDraftStack';
 import WriterNavigator from './WriterNavigator';
+import WriterSettingsStack from './WriterSettingsStack';
 import WriteStack from './WriteStack';
 
 const Tab = createBottomTabNavigator();
@@ -73,7 +74,7 @@ export default function WriterBottomTabNavigator() {
             />
             <Tab.Screen 
                 name="Settings" 
-                component={WriterNavigator} 
+                component={WriterSettingsStack} 
                 options={{
                     tabBarLabel: 'Settings',
                 }}
