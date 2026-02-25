@@ -177,47 +177,6 @@ export default function EditProfile({ navigation }) {
                                 keyboardType="numeric"
                             />
                         </View>
-
-                        {/* City */}
-                        <View style={styles.inputWrapper}>
-                            <ThemedText style={styles.inputLabel}>City</ThemedText>
-                            <TouchableOpacity style={styles.selectInput}>
-                                <ThemedText style={city ? styles.selectText : styles.selectPlaceholder}>
-                                    {city || "Select your City"}
-                                </ThemedText>
-                                <Ionicons name="chevron-down" size={20} color="#999" />
-                            </TouchableOpacity>
-                        </View>
-
-                        {/* My Interests */}
-                        <View style={styles.inputWrapper}>
-                            <ThemedText style={styles.inputLabel}>My Interests</ThemedText>
-                            <ThemedText style={styles.interestDescription}>
-                                Choose topics you like to see in your feed
-                            </ThemedText>
-
-                            <View style={styles.interestsContainer}>
-                                {interests.map((interest) => (
-                                    <TouchableOpacity
-                                        key={interest}
-                                        style={[
-                                            styles.interestChip,
-                                            selectedInterests.includes(interest) && styles.interestChipSelected
-                                        ]}
-                                        onPress={() => toggleInterest(interest)}
-                                    >
-                                        <ThemedText
-                                            style={[
-                                                styles.interestText,
-                                                selectedInterests.includes(interest) && styles.interestTextSelected
-                                            ]}
-                                        >
-                                            {interest}
-                                        </ThemedText>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
                     </View>
 
                     {/* Save Button with GradientButton */}
