@@ -1,6 +1,7 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import React from 'react';
 import {
     Alert,
@@ -11,16 +12,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function CreateArticle({ navigation }) {
+export default function CreateArticle() {
     const { colors } = useTheme();
+    const navigation= useNavigation()
 
     const handleTypeSelect = (type) => {
         if (type === 'live') {
-            Alert.alert('Live News', 'Create live news article');
+            navigation.navigate('AddLiveNews')
         } else if (type === 'podcast') {
             Alert.alert('Podcast', 'Create new podcast');
         } else if (type === 'story') {
-            Alert.alert('Story', 'Create new story/article');
+            navigation.navigate('AddStory')
         }
     };
 
@@ -47,18 +49,18 @@ export default function CreateArticle({ navigation }) {
 
                     <View style={{flexDirection: 'row', justifyContent: 'space-between', gap: 12}}>
                         {/* Live News Section */}
-                        <View style={styles.liveSection}>
+                        <TouchableOpacity onPress={() => handleTypeSelect('live')} style={styles.liveSection}>
                             <View style={styles.liveHeader}>
                                 <Ionicons name="radio-outline" size={20} color="#FF3B30" />
                                 <ThemedText style={styles.liveTitle}>LIVE</ThemedText>
                             </View>
-                            <TouchableOpacity
+                            <View
                                 style={styles.liveButton}
-                                onPress={() => handleTypeSelect('live')}
+                                
                             >
                                 <ThemedText style={styles.buttonText}>Add Live News</ThemedText>
-                            </TouchableOpacity>
-                        </View>
+                            </View>
+                        </TouchableOpacity>
 
                         {/* Podcast Section */}
                         <View style={styles.podcastSection}>
@@ -123,9 +125,9 @@ const styles = StyleSheet.create({
         paddingBottom: 30,
     },
     subtitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontFamily: 'tenez',
-        color: '#000',
+        // color: '#000',
         marginBottom: 30,
         lineHeight: 24,
         textAlign: 'center',
