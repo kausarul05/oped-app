@@ -4,7 +4,6 @@ import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React from 'react';
 import {
-    Alert,
     ScrollView,
     StyleSheet,
     TouchableOpacity,
@@ -20,7 +19,7 @@ export default function CreateArticle() {
         if (type === 'live') {
             navigation.navigate('AddLiveNews')
         } else if (type === 'podcast') {
-            Alert.alert('Podcast', 'Create new podcast');
+            navigation.navigate('AddPodcast')
         } else if (type === 'story') {
             navigation.navigate('AddStory')
         }

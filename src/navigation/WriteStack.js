@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AddLiveNews from '../screens/Writer/CreateArticle/AddLiveNews';
+import AddPodcast from '../screens/Writer/CreateArticle/AddPodCast';
 import AddStory from '../screens/Writer/CreateArticle/AddStore';
 import CreateArticle from '../screens/Writer/CreateArticle/CreateArticle';
 
@@ -15,6 +16,7 @@ export default function WriteStack() {
             <Stack.Screen name="CreateArticle" component={CreateArticle} />
             <Stack.Screen name="AddStory" component={AddStory} />
             <Stack.Screen name="AddLiveNews" component={AddLiveNews} />
+            <Stack.Screen name="AddPodcast" component={AddPodcast} />
             {/* <Stack.Screen name="CreatePodcast" component={CreatePodcast} />
             <Stack.Screen name="EditDraft" component={EditDraft} />
             <Stack.Screen name="PublishSettings" component={PublishSettings} /> */}

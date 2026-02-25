@@ -5,7 +5,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import {
     Alert,
-    Image,
     ScrollView,
     StyleSheet,
     TextInput,
@@ -67,17 +66,17 @@ export default function AddLiveNews({ navigation }) {
                 </View>
 
                 {/* Live Indicator */}
-                <View style={styles.liveIndicator}>
+                {/* <View style={styles.liveIndicator}>
                     <View style={styles.liveDot} />
                     <ThemedText style={styles.liveText}>LIVE</ThemedText>
-                </View>
+                </View> */}
 
                 <ScrollView
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContent}
                 >
                     {/* Image Upload Section */}
-                    <View style={styles.section}>
+                    {/* <View style={styles.section}>
                         <ThemedText style={styles.sectionTitle}>News Image</ThemedText>
                         
                         <TouchableOpacity
@@ -95,10 +94,10 @@ export default function AddLiveNews({ navigation }) {
                                 </>
                             )}
                         </TouchableOpacity>
-                    </View>
+                    </View> */}
 
                     {/* News Content Section */}
-                    <View style={styles.section}>
+                    {/* <View style={styles.section}>
                         <ThemedText style={styles.sectionTitle}>News Content</ThemedText>
                         <TextInput
                             style={styles.contentInput}
@@ -110,7 +109,7 @@ export default function AddLiveNews({ navigation }) {
                             numberOfLines={4}
                             textAlignVertical="top"
                         />
-                    </View>
+                    </View> */}
 
                     {/* News Summary Section */}
                     <View style={styles.section}>
@@ -131,13 +130,13 @@ export default function AddLiveNews({ navigation }) {
                             maxLength={1000}
                             textAlignVertical="top"
                         />
-                        <ThemedText style={styles.summaryHint}>
+                        {/* <ThemedText style={styles.summaryHint}>
                             Brief summary of the news (max 1000 characters)
-                        </ThemedText>
+                        </ThemedText> */}
                     </View>
 
                     {/* Additional Options */}
-                    <View style={styles.optionsSection}>
+                    {/* <View style={styles.optionsSection}>
                         <TouchableOpacity 
                             style={[styles.optionButton, isLive && styles.optionButtonActive]}
                             onPress={() => setIsLive(true)}
@@ -157,7 +156,7 @@ export default function AddLiveNews({ navigation }) {
                                 Schedule for later
                             </ThemedText>
                         </TouchableOpacity>
-                    </View>
+                    </View> */}
                 </ScrollView>
             </SafeAreaView>
         </ThemedView>
@@ -193,11 +192,12 @@ const styles = StyleSheet.create({
         fontWeight: '400',
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
+        letterSpacing: 1
     },
     publishButton: {
         paddingHorizontal: 16,
         paddingVertical: 8,
-        backgroundColor: '#FF3B30',
+        backgroundColor: '#4B59B3',
         borderRadius: 20,
     },
     publishText: {
@@ -246,6 +246,7 @@ const styles = StyleSheet.create({
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
         marginBottom: 8,
+        letterSpacing: 1,
     },
     uploadBox: {
         backgroundColor: '#FFF5F5',
@@ -292,21 +293,21 @@ const styles = StyleSheet.create({
     },
     summaryInput: {
         borderWidth: 1,
-        borderColor: '#FF3B3020',
+        borderColor: '#E3E3E9',
         borderRadius: 8,
         paddingHorizontal: 16,
         paddingVertical: 14,
         fontSize: 14,
         fontFamily: 'tenez',
-        color: '#333',
-        backgroundColor: '#FFF5F5',
+        color: '#000',
+        backgroundColor: '#fff',
         minHeight: 150,
         textAlignVertical: 'top',
     },
     charCount: {
         fontSize: 12,
         fontFamily: 'tenez',
-        color: '#FF3B30',
+        color: '#000000',
     },
     summaryHint: {
         fontSize: 12,
