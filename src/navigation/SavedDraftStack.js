@@ -1,5 +1,5 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import SavedDrafts from '../screens/Writer/SavedDrafts';
+import SavedDrafts from '../screens/Writer/SaveDrafts/SavedDrafts';
 
 const Stack = createNativeStackNavigator();
 

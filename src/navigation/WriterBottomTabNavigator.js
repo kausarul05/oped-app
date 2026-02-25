@@ -1,6 +1,7 @@
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import SavedDraftStack from './SavedDraftStack';
 import WriterNavigator from './WriterNavigator';
 import WriteStack from './WriteStack';
 
@@ -22,7 +23,7 @@ export default function WriterBottomTabNavigator() {
                     } else if (route.name === 'Write') {
                         iconName = focused ? 'create' : 'create-outline';
                         return <Ionicons name={iconName} size={size} color={color} />;
-                    } else if (route.name === 'Drafts') {
+                    } else if (route.name === 'Save & Draft') {
                         return <MaterialCommunityIcons 
                             name={focused ? 'file-document' : 'file-document-outline'} 
                             size={size} 
@@ -64,10 +65,10 @@ export default function WriterBottomTabNavigator() {
                 }}
             />
             <Tab.Screen 
-                name="Drafts" 
-                component={WriterNavigator} 
+                name="Save & Draft" 
+                component={SavedDraftStack} 
                 options={{
-                    tabBarLabel: 'Drafts',
+                    tabBarLabel: 'Save & Draft',
                 }}
             />
             <Tab.Screen 
