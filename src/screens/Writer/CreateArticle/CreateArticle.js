@@ -117,6 +117,7 @@ const styles = StyleSheet.create({
         fontWeight: '400',
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
+        letterSpacing: 1
     },
     scrollContent: {
         paddingHorizontal: 16,
@@ -195,8 +196,8 @@ const styles = StyleSheet.create({
         paddingVertical: 26,
         marginTop: 8,
         borderTopWidth: 1,
-        borderTopColor: '#c5c4c4',
-        backgroundColor: '#ccd1fa',
+        borderTopColor: '#e7e7e7',
+        backgroundColor: '#e5e7fa',
         borderRadius: 8,
         elevation: 1
     },
