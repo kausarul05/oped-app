@@ -223,9 +223,9 @@ export default function PostsList() {
         }));
 
         // Show feedback
-        if (!likedPosts[id]) {
-            Alert.alert('Liked', 'You liked this post!');
-        }
+        // if (!likedPosts[id]) {
+        //     Alert.alert('Liked', 'You liked this post!');
+        // }
     };
 
     const handleShare = async (post) => {

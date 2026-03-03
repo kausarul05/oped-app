@@ -128,7 +128,7 @@ export default function AddStory({ navigation }) {
                         style={styles.publishButton}
                         onPress={() => Alert.alert('Publish', 'Story published successfully!')}
                     >
-                        <ThemedText style={styles.publishText}>Publish</ThemedText>
+                        <ThemedText style={styles.publishText}>Send To Editor</ThemedText>
                     </TouchableOpacity>
                 </View>
 

@@ -15,8 +15,8 @@ import Carousel from 'react-native-snap-carousel-new';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.7;
-const CARD_HEIGHT = 310;
-const SLIDER_WIDTH = width;
+const CARD_HEIGHT = 410;
+const SLIDER_WIDTH = 400;
 
 import { LogBox } from 'react-native';
 
@@ -98,7 +98,7 @@ export default function ReaderSlider() {
             ...prev,
             [id]: newLikedState
         }));
-        
+
         // Update like count
         setLikeCounts(prev => ({
             ...prev,
@@ -111,7 +111,7 @@ export default function ReaderSlider() {
             ...prev,
             [id]: !prev[id]
         }));
-        
+
         // Show feedback
         if (!bookmarkedItems[id]) {
             Alert.alert('Saved', 'Article bookmarked successfully!');
@@ -144,10 +144,10 @@ export default function ReaderSlider() {
         const isLiked = likedItems[item.id] || false;
         const isBookmarked = bookmarkedItems[item.id] || false;
         const isActive = index === activeIndex;
-        
+
         // Get current like count (either updated or original)
-        const currentLikeCount = likeCounts[item.id] !== undefined 
-            ? likeCounts[item.id] 
+        const currentLikeCount = likeCounts[item.id] !== undefined
+            ? likeCounts[item.id]
             : item.likes;
 
         return (
@@ -156,9 +156,9 @@ export default function ReaderSlider() {
                 {
                     backgroundColor: '#FFFFFF',
                     shadowColor: '#000',
-                    transform: [
-                        { scale: isActive ? 1 : 0.95 }
-                    ]
+                    // transform: [
+                    //     { scale: isActive ? 1 : 0.95 }
+                    // ]
                 }
             ]}
             >
@@ -168,7 +168,7 @@ export default function ReaderSlider() {
                 />
 
                 {/* Bookmark at top right */}
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={styles.bookmarkButton}
                     onPress={() => toggleBookmark(item.id)}
                 >
@@ -202,7 +202,7 @@ export default function ReaderSlider() {
 
                         <View style={styles.actionIcons}>
                             {/* Like button with count */}
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.actionButton}
                                 onPress={() => toggleLike(item.id, item.likes)}
                             >
@@ -220,7 +220,7 @@ export default function ReaderSlider() {
                             </TouchableOpacity>
 
                             {/* Comment button with count */}
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.actionButton}
                                 onPress={() => handleComment(item)}
                             >
@@ -229,7 +229,7 @@ export default function ReaderSlider() {
                             </TouchableOpacity>
 
                             {/* Share button */}
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.actionButton}
                                 onPress={() => handleShare(item)}
                             >
@@ -244,7 +244,7 @@ export default function ReaderSlider() {
 
     return (
         <ThemedView style={styles.container}>
-            <Carousel
+            {/* <Carousel
                 ref={carouselRef}
                 data={articles}
                 renderItem={renderItem}
@@ -268,8 +268,37 @@ export default function ReaderSlider() {
                 enableMomentum={false}
                 decelerationRate="fast"
                 inactiveSlideShift={0}
+            /> */}
+
+            {/* <Carousel
+                ref={carouselRef}
+                data={articles}
+                renderItem={renderItem}
+                sliderWidth={SLIDER_WIDTH}
+                itemWidth={300}
+                // onSnapToItem = { index => this.setState({activeIndex:index}) }
+                layout={'default'}
+            /> */}
+
+            <Carousel
+                layout="stack"
+                ref={carouselRef}
+                data={articles}
+                renderItem={renderItem}
+
+                sliderWidth={SLIDER_WIDTH}
+                itemWidth={350}     // REQUIRED 🔥
+
+                inactiveSlideScale={0.9}
+                inactiveSlideOpacity={0.7}
+
+                loop={true}
+                autoplay={true}
+                autoplayInterval={2500}
+
+                onSnapToItem={onSnapToItem}
             />
-            
+
             {/* Pagination Dots */}
             {/* <View style={styles.paginationContainer}>
                 {articles.map((_, index) => (
@@ -310,7 +339,9 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 3,
+        borderWidth: 1,
+        borderColor: '#0000001F'
+        // elevation: 1,
     },
     cardImage: {
         width: '100%',
@@ -341,7 +372,7 @@ const styles = StyleSheet.create({
         fontFamily: 'CoFoRaffineMedium',
     },
     cardContent: {
-        flex: 1,
+        // flex: 1,
         padding: 12,
         justifyContent: 'space-between',
     },
@@ -351,6 +382,7 @@ const styles = StyleSheet.create({
         fontFamily: 'CoFoRaffineBold',
         marginBottom: 4,
         color: '#000',
+        marginBottom: 14
     },
     cardSubtitle: {
         fontSize: 13,
@@ -359,6 +391,7 @@ const styles = StyleSheet.create({
         marginBottom: 0,
         color: '#333',
         lineHeight: 16,
+        marginBottom: 14
     },
     cardDescription: {
         fontSize: 12,
@@ -367,6 +400,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         color: '#666',
         lineHeight: 15,
+        marginBottom: 98
     },
     footerContainer: {
         flexDirection: 'row',

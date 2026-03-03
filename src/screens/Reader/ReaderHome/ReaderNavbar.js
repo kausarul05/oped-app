@@ -16,11 +16,11 @@ export default function ReaderNavbar() {
 
     const categories = [
         { id: 1, name: 'Explorer', icon: 'compass-outline' },
-        { id: 2, name: 'Culture', icon: 'color-palette-outline' },
-        { id: 3, name: 'Travel', icon: 'airplane-outline' },
-        { id: 4, name: 'Finance', icon: 'trending-up-outline' },
         { id: 5, name: 'Politics', icon: 'flag-outline' },
         { id: 6, name: 'Business', icon: 'briefcase-outline' },
+        { id: 4, name: 'Finance', icon: 'trending-up-outline' },
+        { id: 2, name: 'Culture', icon: 'color-palette-outline' },
+        { id: 3, name: 'Travel', icon: 'airplane-outline' },
     ];
 
     useEffect(() => {
