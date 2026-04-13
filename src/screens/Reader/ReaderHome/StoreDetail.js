@@ -1,8 +1,9 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
 import { FontAwesome6, Foundation, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     FlatList,
     Image,
@@ -16,127 +17,95 @@ import {
 } from 'react-native';
 import RenderHTML from 'react-native-render-html';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import storyService from '../../../services/storyService';
 
 export default function StoryDetail({ route, navigation }) {
     const { width } = useWindowDimensions();
     const { colors } = useTheme();
+    const { postId } = route.params || {};
+
+    console.log("postid", postId)
+    
     const [liked, setLiked] = useState(false);
     const [bookmarked, setBookmarked] = useState(false);
-    const [likeCount, setLikeCount] = useState(3.5);
+    const [likeCount, setLikeCount] = useState(0);
     const [commentText, setCommentText] = useState('');
     const [showReplyInput, setShowReplyInput] = useState(null);
     const [replyText, setReplyText] = useState('');
     const [showFullContent, setShowFullContent] = useState(false);
+    const [story, setStory] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [comments, setComments] = useState([]);
 
-    // Comments state
-    const [comments, setComments] = useState([
-        {
-            id: '1',
-            userName: 'Rahul Sharma',
-            userImage: 'https://randomuser.me/api/portraits/men/2.jpg',
-            timeAgo: '2 hours ago',
-            text: 'This article presents a very well-structured and thoughtful analysis of the topic. I appreciate how the author breaks down complex ideas into digestible pieces. The examples provided really help illustrate the key points.',
-            likes: 24,
-            isLiked: false,
-            replies: [
-                {
-                    id: 'r1',
-                    userName: 'Priya Patel',
-                    userImage: 'https://randomuser.me/api/portraits/women/3.jpg',
-                    timeAgo: '1 hour ago',
-                    text: 'Totally agree! The section about digital media was particularly insightful.',
-                    likes: 8,
-                    isLiked: false,
-                },
-                {
-                    id: 'r2',
-                    userName: 'Amit Kumar',
-                    userImage: 'https://randomuser.me/api/portraits/men/4.jpg',
-                    timeAgo: '45 min ago',
-                    text: 'I learned so much from this. Thanks for sharing!',
-                    likes: 3,
-                    isLiked: false,
-                }
-            ]
-        },
-        {
-            id: '2',
-            userName: 'Neha Singh',
-            userImage: 'https://randomuser.me/api/portraits/women/5.jpg',
-            timeAgo: '5 hours ago',
-            text: 'Really enjoyed reading this! The perspective on independent journalism is refreshing. Would love to see more content like this.',
-            likes: 15,
-            isLiked: false,
-            replies: []
-        },
-        {
-            id: '3',
-            userName: 'Vikram Mehta',
-            userImage: 'https://randomuser.me/api/portraits/men/6.jpg',
-            timeAgo: '1 day ago',
-            text: 'Great read! The part about reader habits shifting really resonated with me.',
-            likes: 7,
-            isLiked: false,
-            replies: []
+    // Fetch story details from API
+    useEffect(() => {
+        if (postId) {
+            fetchStoryDetail();
         }
-    ]);
+    }, [postId]);
 
-    // Related keywords
-    const relatedKeywords = [
-        'Blockchain',
-        'Gadgets',
-        'Robotics',
-        'Software Development',
-        'AI',
-        'Machine Learning'
-    ];
-
-    // Story data with HTML content
-    const story = {
-        id: '1',
-        authorName: 'Katy Waldman',
-        authorTitle: 'Culture and Lifestyle Writer',
-        authorBio: 'Katy Waldman is a culture and lifestyle writer who explores modern trends, human stories, and creative perspectives. Her writing focuses on thoughtful analysis and engaging storytelling.',
-        postDate: '22 Jan, 2020',
-        authorImage: 'https://randomuser.me/api/portraits/women/1.jpg',
-        coverImage: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism',
-        summary: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told, shared, and trusted the world.',
-        shortContent: `
-            <h1>The Future of Digital Media and the Changing Voice of Independent Journalism</h1>
+    const fetchStoryDetail = async () => {
+        try {
+            const result = await storyService.getStoryById(postId);
             
-            <p>I didn’t want a regular job, so my friend and I decided to start a business selling digital products. We spent a lot of time figuring out how to make it work.</p>
-            
-            <p>Eventually, we found a product to sell. My friend handled Facebook ads, and I created the ad designs in Canva. We started investing Rs. 600 each day in ads. I know it’s not much, but that’s all we could afford.</p>
-            
-            <p>To make a profit, we had to earn more than Rs. 600 a day. We lost money on the first day, but on the second day we made a profit of Rs. 150.</p>
-        `,
-        fullContent: `
-            <h1>The Future of Digital Media and the Changing Voice of Independent Journalism</h1>
-            
-            <p>I didn’t want a regular job, so my friend and I decided to start a business selling digital products. We spent a lot of time figuring out how to make it work.</p>
-            
-            <p>Eventually, we found a product to sell. My friend handled Facebook ads, and I created the ad designs in Canva. We started investing Rs. 600 each day in ads. I know it’s not much, but that’s all we could afford.</p>
-            
-            <p>To make a profit, we had to earn more than Rs. 600 a day. We lost money on the first day, but on the second day we made a profit of Rs. 150.</p>
-            
-            <p>As we continued investing our savings in Facebook ads in those first weeks, our money eventually ran out. We didn’t have any other source of income at that time, so we had to stop.</p>
-            
-            <p>Even though it felt like we had wasted our money and got nothing in return, I reminded myself that every—</p>
-            
-            <h2>The Future of Digital Media and the Changing Voice of Independent Journalism</h2>
-            
-            <p>I didn’t want a regular job, so my friend and I decided to</p>
-        `,
-        commentCount: 45,
-        shareCount: 150,
-        likeCount: 3.5,
+            if (result.data) {
+                const storyData = result.data?.data;
+                console.log("store Data", storyData)
+                setStory({
+                    id: storyData._id,
+                    authorName: storyData.author?.name || 'Unknown Author',
+                    authorTitle: 'Writer',
+                    authorBio: storyData.author?.bio || 'No bio available',
+                    postDate: formatDate(storyData.createdAt),
+                    authorImage: storyData.author?.profileImage || 'https://randomuser.me/api/portraits/men/1.jpg',
+                    coverImage: storyData.coverImage,
+                    headline: storyData.title,
+                    summary: storyData.summary,
+                    content: storyData.content,
+                    commentCount: storyData.comments || 0,
+                    shareCount: storyData.shares || 0,
+                    likeCount: storyData.likes || 0,
+                    tags: storyData.tags || [],
+                    isPremium: storyData.isPremium,
+                });
+                setLikeCount(storyData.likes || 0);
+            }
+        } catch (error) {
+            console.error('Error fetching story:', error);
+            Alert.alert('Error', 'Failed to load story');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    // HTML styles with proper font families for headings
+    console.log("store", story)
+
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { 
+            day: 'numeric', 
+            month: 'short', 
+            year: 'numeric' 
+        });
+    };
+
+    // HTML styles
     const htmlStyles = {
+        body: {
+            fontSize: 16,
+            fontFamily: 'tenez',
+            color: '#444',
+            lineHeight: 26,
+        },
+        p: {
+            fontSize: 16,
+            fontFamily: 'tenez',
+            color: '#444',
+            lineHeight: 26,
+            marginBottom: 16,
+        },
         h1: {
-            fontSize: 18,
+            fontSize: 24,
             fontWeight: '700',
             fontFamily: 'CoFoRaffineBold',
             color: '#000',
@@ -145,40 +114,45 @@ export default function StoryDetail({ route, navigation }) {
             marginTop: 8,
         },
         h2: {
-            fontSize: 18,
-            fontWeight: '700',
+            fontSize: 20,
+            fontWeight: '600',
             fontFamily: 'CoFoRaffineBold',
             color: '#000',
             lineHeight: 28,
             marginBottom: 14,
             marginTop: 6,
         },
-        p: {
-            fontSize: 16,
-            fontFamily: 'tenez',
-            color: '#444',
-            lineHeight: 26,
-            marginBottom: 18,
-        },
     };
 
-    const toggleLike = () => {
-        setLiked(!liked);
-        setLikeCount(liked ? likeCount - 0.1 : likeCount + 0.1);
+    const toggleLike = async () => {
+        const newLikedState = !liked;
+        setLiked(newLikedState);
+        setLikeCount(newLikedState ? likeCount + 1 : likeCount - 1);
+
+        if (newLikedState) {
+            await storyService.likeStory(story.id);
+        } else {
+            await storyService.unlikeStory(story.id);
+        }
     };
 
-    const toggleBookmark = () => {
-        setBookmarked(!bookmarked);
-        Alert.alert(
-            bookmarked ? 'Bookmark Removed' : 'Bookmark Added',
-            bookmarked ? 'Story removed from bookmarks' : 'Story saved to bookmarks'
-        );
+    const toggleBookmark = async () => {
+        const newState = !bookmarked;
+        setBookmarked(newState);
+
+        if (newState) {
+            await storyService.bookmarkStory(story.id);
+            Alert.alert('Saved', 'Story bookmarked successfully!');
+        } else {
+            await storyService.unbookmarkStory(story.id);
+            Alert.alert('Removed', 'Bookmark removed');
+        }
     };
 
     const handleShare = async () => {
         try {
             await Share.share({
-                message: `${story.headline}\n\nRead more on HOPED app`,
+                message: `${story?.headline}\n\nRead more on HOPED app`,
                 title: 'Share Story'
             });
         } catch (error) {
@@ -186,7 +160,6 @@ export default function StoryDetail({ route, navigation }) {
         }
     };
 
-    // Comment functions
     const handleAddComment = () => {
         if (commentText.trim()) {
             const newComment = {
@@ -266,7 +239,6 @@ export default function StoryDetail({ route, navigation }) {
 
     const renderComment = ({ item }) => (
         <View style={styles.commentContainer}>
-            {/* Main Comment */}
             <View style={styles.commentMain}>
                 <Image source={{ uri: item.userImage }} style={styles.commentAvatar} />
                 <View style={styles.commentContent}>
@@ -276,7 +248,6 @@ export default function StoryDetail({ route, navigation }) {
                     </View>
                     <ThemedText style={styles.commentText}>{item.text}</ThemedText>
 
-                    {/* Comment Actions */}
                     <View style={styles.commentActions}>
                         <TouchableOpacity
                             style={styles.commentAction}
@@ -301,7 +272,6 @@ export default function StoryDetail({ route, navigation }) {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Reply Input */}
                     {showReplyInput === item.id && (
                         <View style={styles.replyInputContainer}>
                             <Image
@@ -329,8 +299,7 @@ export default function StoryDetail({ route, navigation }) {
                 </View>
             </View>
 
-            {/* Replies */}
-            {item.replies.length > 0 && (
+            {item.replies?.length > 0 && (
                 <View style={styles.repliesContainer}>
                     {item.replies.map(reply => (
                         <View key={reply.id} style={styles.replyMain}>
@@ -341,8 +310,6 @@ export default function StoryDetail({ route, navigation }) {
                                     <ThemedText style={styles.commentTime}>{reply.timeAgo}</ThemedText>
                                 </View>
                                 <ThemedText style={styles.commentText}>{reply.text}</ThemedText>
-
-                                {/* Reply Actions */}
                                 <View style={styles.commentActions}>
                                     <TouchableOpacity
                                         style={styles.commentAction}
@@ -366,10 +333,25 @@ export default function StoryDetail({ route, navigation }) {
         </View>
     );
 
+    if (loading) {
+        return (
+            <ThemedView style={[styles.container, styles.centerContainer]}>
+                <ActivityIndicator size="large" color="#4B59B3" />
+            </ThemedView>
+        );
+    }
+
+    if (!story) {
+        return (
+            <ThemedView style={[styles.container, styles.centerContainer]}>
+                <ThemedText style={styles.noDataText}>Story not found</ThemedText>
+            </ThemedView>
+        );
+    }
+
     return (
         <ThemedView style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
-                {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <Ionicons name="arrow-back" size={24} color="#000" />
@@ -390,19 +372,21 @@ export default function StoryDetail({ route, navigation }) {
                 </View>
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                    {/* Cover Image */}
                     <Image source={{ uri: story.coverImage }} style={styles.coverImage} />
 
-                    {/* Headline */}
+                    {story.isPremium && (
+                        <View style={styles.premiumBadge}>
+                            <ThemedText style={styles.premiumText}>PREMIUM</ThemedText>
+                        </View>
+                    )}
+
                     <ThemedText style={styles.pageHeadline}>{story.headline}</ThemedText>
 
-                    {/* Summary */}
                     <View style={styles.summaryContainer}>
                         <ThemedText style={styles.summary}>{story.summary}</ThemedText>
                     </View>
 
-                    {/* Author Section - At the top (after summary) */}
-                    <TouchableOpacity style={styles.authorSection} onPress={() => navigation.navigate('AuthorProfile', { author: story.author })}>
+                    <TouchableOpacity style={styles.authorSection}>
                         <View style={styles.authorCard}>
                             <View style={styles.authorInfo}>
                                 <ThemedText style={styles.authorName}>{story.authorName}</ThemedText>
@@ -412,43 +396,26 @@ export default function StoryDetail({ route, navigation }) {
                         </View>
                     </TouchableOpacity>
 
-                    {/* HTML Content - with proper font family for headings */}
                     <View style={styles.htmlContentArea}>
                         <RenderHTML
                             contentWidth={width - 32}
-                            source={{ html: showFullContent ? story.fullContent : story.shortContent }}
+                            source={{ html: story.content?.replace(/\n/g, '<br/>') || '' }}
                             tagsStyles={htmlStyles}
                             defaultTextProps={{
                                 style: { fontFamily: 'tenez' }
                             }}
-                            renderersProps={{
-                                a: {
-                                    onPress: (event, href) => console.log('Link pressed:', href)
-                                }
-                            }}
                         />
                     </View>
 
-                    {/* Read More Section */}
-                    {!showFullContent && (
-                        <TouchableOpacity
-                            style={styles.readMoreContainer}
-                            onPress={() => setShowFullContent(true)}
-                        >
-                            <ThemedText style={styles.readMoreText}>Read more...</ThemedText>
-                        </TouchableOpacity>
-                    )}
-
-                    {/* Action Buttons - At the end of story */}
                     <View style={styles.storyActionContainer}>
                         <TouchableOpacity style={[styles.storyActionButton, liked && styles.storyActionButtonActive]} onPress={toggleLike}>
                             <Foundation name="like" size={22} color={liked ? "#4B59B3" : "#666"} />
-                            <ThemedText style={[styles.storyActionText, liked && { color: '#4B59B3' }]}>{likeCount.toFixed(1)}k</ThemedText>
+                            <ThemedText style={[styles.storyActionText, liked && { color: '#4B59B3' }]}>{likeCount}</ThemedText>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.storyActionButton}>
                             <MaterialCommunityIcons name="message-text-outline" size={22} color="#666" />
-                            <ThemedText style={styles.storyActionText}>{story.commentCount}k</ThemedText>
+                            <ThemedText style={styles.storyActionText}>{story.commentCount}</ThemedText>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.storyActionButton} onPress={handleShare}>
@@ -457,11 +424,9 @@ export default function StoryDetail({ route, navigation }) {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Comments Section */}
                     <View style={styles.commentsSection}>
                         <ThemedText style={styles.sectionTitle}>Comments ({comments.length})</ThemedText>
 
-                        {/* Add Comment Input */}
                         <View style={styles.addCommentContainer}>
                             <Image
                                 source={{ uri: 'https://randomuser.me/api/portraits/men/1.jpg' }}
@@ -485,7 +450,6 @@ export default function StoryDetail({ route, navigation }) {
                             </View>
                         </View>
 
-                        {/* Comments List */}
                         <FlatList
                             data={comments}
                             renderItem={renderComment}
@@ -495,11 +459,7 @@ export default function StoryDetail({ route, navigation }) {
                         />
                     </View>
 
-                    {/* Author Info at Bottom */}
-                    <TouchableOpacity
-                        style={styles.bottomAuthorSection}
-                        onPress={() => navigation.navigate('AuthorProfile', { authorId: '1' })}
-                    >
+                    <View style={styles.bottomAuthorSection}>
                         <ThemedText style={styles.sectionTitle}>Author</ThemedText>
                         <View style={[styles.bottomAuthorCard, { elevation: 1, padding: 8, borderRadius: 12 }]}>
                             <View>
@@ -512,24 +472,20 @@ export default function StoryDetail({ route, navigation }) {
                                 </View>
                             </View>
                         </View>
-                    </TouchableOpacity>
-
-                    {/* Related Keywords */}
-                    <View style={styles.keywordsSection}>
-                        <ThemedText style={styles.sectionTitle}>Related Keyword</ThemedText>
-                        <View style={styles.keywordsContainer}>
-                            {relatedKeywords.slice(0, 5).map((keyword, index) => (
-                                <TouchableOpacity key={index} style={styles.keywordTag}>
-                                    <ThemedText style={styles.keywordText}>{keyword}</ThemedText>
-                                </TouchableOpacity>
-                            ))}
-                            {relatedKeywords.length > 5 && (
-                                <TouchableOpacity style={styles.keywordTag}>
-                                    <ThemedText style={styles.keywordText}>Sec {relatedKeywords.length - 5} More</ThemedText>
-                                </TouchableOpacity>
-                            )}
-                        </View>
                     </View>
+
+                    {story.tags && story.tags.length > 0 && (
+                        <View style={styles.keywordsSection}>
+                            <ThemedText style={styles.sectionTitle}>Related Keyword</ThemedText>
+                            <View style={styles.keywordsContainer}>
+                                {story.tags.slice(0, 5).map((keyword, index) => (
+                                    <TouchableOpacity key={index} style={styles.keywordTag}>
+                                        <ThemedText style={styles.keywordText}>{keyword}</ThemedText>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+                    )}
                 </ScrollView>
             </SafeAreaView>
         </ThemedView>
@@ -544,6 +500,15 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: '#FFFFFF',
+    },
+    centerContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    noDataText: {
+        fontSize: 16,
+        fontFamily: 'tenez',
+        color: '#999',
     },
     header: {
         flexDirection: 'row',
@@ -578,6 +543,22 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 280,
         resizeMode: 'cover',
+    },
+    premiumBadge: {
+        position: 'absolute',
+        top: 80,
+        right: 20,
+        backgroundColor: '#FF9500',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        zIndex: 10,
+    },
+    premiumText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '600',
+        fontFamily: 'CoFoRaffineBold',
     },
     pageHeadline: {
         fontSize: 22,
@@ -633,15 +614,6 @@ const styles = StyleSheet.create({
     htmlContentArea: {
         paddingHorizontal: 16,
         paddingVertical: 20,
-    },
-    readMoreContainer: {
-        paddingHorizontal: 16,
-        paddingBottom: 20,
-    },
-    readMoreText: {
-        fontSize: 16,
-        fontFamily: 'CoFoRaffineBold',
-        color: '#4B59B3',
     },
     storyActionContainer: {
         flexDirection: 'row',

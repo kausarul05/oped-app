@@ -29,7 +29,7 @@ const storyService = {
     // Get single story by ID
     getStoryById: async (storyId) => {
         try {
-            const response = await api.get(`/api/v1/story/reader/${storyId}`);
+            const response = await api.get(`/api/v1/story/reader/detail/${storyId}`);
             return { success: true, data: response.data };
         } catch (error) {
             return { success: false, error: error.message };
