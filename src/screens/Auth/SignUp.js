@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import { Image, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import GradientButton from '../../components/GradientButton';
 import {
@@ -11,31 +11,79 @@ import {
 } from '../../components/ThemedComponents';
 import { useRole } from '../../context/RoleContext';
 import { useTheme } from '../../hooks/useTheme';
+import authService from '../../services/authService';
 
 export default function SignUp() {
     const { colors } = useTheme();
-    const { saveUserRole } = useRole(); // Get saveUserRole from context
+    const { saveUserRole } = useRole();
     const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [selectedRole, setSelectedRole] = useState('reader'); // 'reader' or 'writer'
+    const [selectedRole, setSelectedRole] = useState('reader');
     const navigation = useNavigation();
 
     const handleSignUp = async () => {
+        // Validation
+        if (!name.trim()) {
+            Alert.alert('Error', 'Please enter your name');
+            return;
+        }
+        if (!email.trim()) {
+            Alert.alert('Error', 'Please enter your email');
+            return;
+        }
+        if (!password.trim()) {
+            Alert.alert('Error', 'Please enter your password');
+            return;
+        }
+        if (password.length < 6) {
+            Alert.alert('Error', 'Password must be at least 6 characters');
+            return;
+        }
+
         setLoading(true);
-        
-        // Simulate API call
-        setTimeout(async () => {
-            // Save the selected role
-            await saveUserRole(selectedRole);
-            setLoading(false);
+
+        try {
+            let result;
             
-            // Navigation will be handled automatically by RootNavigator
-            // based on the saved role
-        }, 2000);
+            // Call different API based on selected role
+            if (selectedRole === 'reader') {
+                result = await authService.readerSignup({
+                    name: name.trim(),
+                    email: email.trim().toLowerCase(),
+                    password: password.trim(),
+                });
+            } else {
+                result = await authService.writerSignup({
+                    name: name.trim(),
+                    email: email.trim().toLowerCase(),
+                    password: password.trim(),
+                });
+            }
+
+            if (result.success) {
+                // Save the selected role
+                await saveUserRole(selectedRole);
+                
+                // Optionally save auth token if returned
+                if (result.data.token) {
+                    // await AsyncStorage.setItem('authToken', result.data.token);
+                }
+                
+                Alert.alert('Success', 'Account created successfully!');
+                // Navigation will be handled automatically by RootNavigator
+            } else {
+                Alert.alert('Signup Failed', result.error || 'Something went wrong');
+            }
+        } catch (error) {
+            console.error('Signup error:', error);
+            Alert.alert('Error', 'Network error. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Gradient colors for selected role

@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     },
     cardImage: {
         width: '100%',
-        height: 140,
+        height: 220,
         resizeMode: 'cover',
     },
     bookmarkButton: {
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         color: '#666',
         lineHeight: 15,
-        marginBottom: 98
+        // marginBottom: 98
     },
     footerContainer: {
         flexDirection: 'row',
