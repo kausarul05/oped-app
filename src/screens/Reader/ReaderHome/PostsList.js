@@ -2,8 +2,9 @@ import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
 import { FontAwesome6, Foundation, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     FlatList,
     Image,
@@ -13,20 +14,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-
-// Fake profile images array
-const profileImages = [
-    'https://randomuser.me/api/portraits/men/1.jpg',
-    'https://randomuser.me/api/portraits/women/2.jpg',
-    'https://randomuser.me/api/portraits/men/3.jpg',
-    'https://randomuser.me/api/portraits/women/4.jpg',
-    'https://randomuser.me/api/portraits/men/5.jpg',
-    'https://randomuser.me/api/portraits/women/6.jpg',
-    'https://randomuser.me/api/portraits/men/7.jpg',
-    'https://randomuser.me/api/portraits/women/8.jpg',
-    'https://randomuser.me/api/portraits/men/9.jpg',
-    'https://randomuser.me/api/portraits/women/10.jpg',
-];
+import storyService from '../../../services/storyService';
 
 export default function PostsList() {
     const { colors } = useTheme();
@@ -34,183 +22,95 @@ export default function PostsList() {
     const [likeCounts, setLikeCounts] = useState({});
     const [menuVisible, setMenuVisible] = useState(null);
     const [selectedPost, setSelectedPost] = useState(null);
+    const [posts, setPosts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
     const navigation = useNavigation();
 
-    // 10 posts data matching your image design
-    const posts = [
-        {
-            id: '1',
-            title: 'Manchester United',
-            timeAgo: '10 hours ago',
-            headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism',
-            description: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told, shared, and trusted the world.',
-            image: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            likes: '9M',
-            comments: '15K',
-            shares: '851',
-            readTime: '5 min',
-            type: 'Article',
-            profileImage: profileImages[0],
-            likeCount: 3.5,
-            commentCount: 45,
-            shareCount: 150,
-        },
-        {
-            id: '2',
-            title: 'Manchester United',
-            timeAgo: '10 hours ago',
-            headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism',
-            description: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told, shared, and trusted the world.',
-            image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            likes: '9M',
-            comments: '15K',
-            shares: '851',
-            readTime: '5 min',
-            type: 'Article',
-            profileImage: profileImages[1],
-            likeCount: 3.5,
-            commentCount: 45,
-            shareCount: 150,
-        },
-        {
-            id: '3',
-            title: 'Manchester United',
-            timeAgo: '10 hours ago',
-            headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism',
-            description: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told, shared, and trusted the world.',
-            image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            likes: '9M',
-            comments: '15K',
-            shares: '851',
-            readTime: '5 min',
-            type: 'Article',
-            profileImage: profileImages[2],
-            likeCount: 3.5,
-            commentCount: 45,
-            shareCount: 150,
-        },
-        {
-            id: '4',
-            title: 'Manchester United',
-            timeAgo: '10 hours ago',
-            headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism',
-            description: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told, shared, and trusted the world.',
-            image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2015&q=80',
-            likes: '9M',
-            comments: '15K',
-            shares: '851',
-            readTime: '5 min',
-            type: 'Article',
-            profileImage: profileImages[3],
-            likeCount: 3.5,
-            commentCount: 45,
-            shareCount: 150,
-        },
-        {
-            id: '5',
-            title: 'Manchester United',
-            timeAgo: '10 hours ago',
-            headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism',
-            description: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told, shared, and trusted the world.',
-            image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            likes: '9M',
-            comments: '15K',
-            shares: '851',
-            readTime: '5 min',
-            type: 'Article',
-            profileImage: profileImages[4],
-            likeCount: 3.5,
-            commentCount: 45,
-            shareCount: 150,
-        },
-        {
-            id: '6',
-            title: 'Manchester United',
-            timeAgo: '10 hours ago',
-            headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism',
-            description: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told, shared, and trusted the world.',
-            image: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            likes: '9M',
-            comments: '15K',
-            shares: '851',
-            readTime: '5 min',
-            type: 'Article',
-            profileImage: profileImages[5],
-            likeCount: 3.5,
-            commentCount: 45,
-            shareCount: 150,
-        },
-        {
-            id: '7',
-            title: 'Manchester United',
-            timeAgo: '10 hours ago',
-            headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism',
-            description: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told, shared, and trusted the world.',
-            image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            likes: '9M',
-            comments: '15K',
-            shares: '851',
-            readTime: '5 min',
-            type: 'Article',
-            profileImage: profileImages[6],
-            likeCount: 3.5,
-            commentCount: 45,
-            shareCount: 150,
-        },
-        {
-            id: '8',
-            title: 'Manchester United',
-            timeAgo: '10 hours ago',
-            headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism',
-            description: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told, shared, and trusted the world.',
-            image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            likes: '9M',
-            comments: '15K',
-            shares: '851',
-            readTime: '5 min',
-            type: 'Article',
-            profileImage: profileImages[7],
-            likeCount: 3.5,
-            commentCount: 45,
-            shareCount: 150,
-        },
-        {
-            id: '9',
-            title: 'Manchester United',
-            timeAgo: '10 hours ago',
-            headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism',
-            description: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told, shared, and trusted the world.',
-            image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2015&q=80',
-            likes: '9M',
-            comments: '15K',
-            shares: '851',
-            readTime: '5 min',
-            type: 'Article',
-            profileImage: profileImages[8],
-            likeCount: 3.5,
-            commentCount: 45,
-            shareCount: 150,
-        },
-        {
-            id: '10',
-            title: 'Manchester United',
-            timeAgo: '10 hours ago',
-            headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism',
-            description: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told, shared, and trusted the world.',
-            image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            likes: '9M',
-            comments: '15K',
-            shares: '851',
-            readTime: '5 min',
-            type: 'Article',
-            profileImage: profileImages[9],
-            likeCount: 3.5,
-            commentCount: 45,
-            shareCount: 150,
-        },
-    ];
+    // Fetch posts from API
+    const fetchPosts = async (pageNum = 1, isLoadMore = false) => {
+        try {
+            const result = await storyService.getStories('technology', pageNum, 10);
+            
+            if (result.success && result.data) {
+                const newPosts = result.data.map(story => ({
+                    id: story._id,
+                    title: story.author?.name || 'Unknown Author',
+                    timeAgo: formatDate(story.createdAt),
+                    headline: story.title,
+                    description: story.summary?.substring(0, 150) + '...',
+                    image: story.coverImage,
+                    likes: story.likes || Math.floor(Math.random() * 100) + 50,
+                    comments: story.comments || Math.floor(Math.random() * 20) + 1,
+                    shares: story.shares || Math.floor(Math.random() * 10) + 1,
+                    readTime: `${story.readingTime} min`,
+                    type: story.isPremium ? 'Premium' : 'Article',
+                    profileImage: story.author?.profileImage || 'https://randomuser.me/api/portraits/men/1.jpg',
+                    likeCount: story.likes ? story.likes / 1000000 : 3.5,
+                    commentCount: story.comments ? story.comments / 1000 : 45,
+                    shareCount: story.shares || 150,
+                    isPremium: story.isPremium,
+                    createdAt: story.createdAt,
+                }));
+                
+                if (isLoadMore) {
+                    setPosts(prev => [...prev, ...newPosts]);
+                } else {
+                    setPosts(newPosts);
+                }
+                
+                // Check if more pages available
+                if (result.pagination) {
+                    setHasMore(pageNum < result.pagination.totalPages);
+                }
+                setPage(pageNum);
+            }
+        } catch (error) {
+            console.error('Error fetching posts:', error);
+            Alert.alert('Error', 'Failed to load posts');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
 
-    const toggleLike = (id, currentLikeCount) => {
+    useEffect(() => {
+        fetchPosts(1);
+    }, []);
+
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffTime = Math.abs(now - date);
+        const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffHours < 24) {
+            return `${diffHours} hours ago`;
+        } else if (diffDays === 1) {
+            return 'Yesterday';
+        } else if (diffDays < 7) {
+            return `${diffDays} days ago`;
+        }
+        return date.toLocaleDateString();
+    };
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        setPage(1);
+        fetchPosts(1);
+    };
+
+    const loadMore = () => {
+        if (hasMore && !loading && !refreshing) {
+            fetchPosts(page + 1, true);
+        }
+    };
+
+    const toggleLike = async (id, currentLikeCount) => {
+        const isLiked = likedPosts[id];
         setLikedPosts(prev => ({
             ...prev,
             [id]: !prev[id]
@@ -219,13 +119,15 @@ export default function PostsList() {
         // Update like count
         setLikeCounts(prev => ({
             ...prev,
-            [id]: !likedPosts[id] ? currentLikeCount + 0.1 : currentLikeCount - 0.1
+            [id]: !isLiked ? currentLikeCount + 0.1 : currentLikeCount - 0.1
         }));
 
-        // Show feedback
-        // if (!likedPosts[id]) {
-        //     Alert.alert('Liked', 'You liked this post!');
-        // }
+        // Call API to like/unlike
+        if (!isLiked) {
+            await storyService.likeStory(id);
+        } else {
+            await storyService.unlikeStory(id);
+        }
     };
 
     const handleShare = async (post) => {
@@ -291,10 +193,16 @@ export default function PostsList() {
                 activeOpacity={0.9}
                 onPress={() => navigation.navigate('StoryDetail', {
                     postId: item.id,
-                    // You can pass the full post data or just the ID to fetch details
                 })}
             >
                 <View style={styles.postContainer}>
+                    {/* Premium Badge */}
+                    {item.isPremium && (
+                        <View style={styles.premiumBadge}>
+                            <ThemedText style={styles.premiumText}>PREMIUM</ThemedText>
+                        </View>
+                    )}
+
                     {/* Header Section */}
                     <View style={styles.postHeader}>
                         <View style={styles.headerLeft}>
@@ -367,6 +275,22 @@ export default function PostsList() {
         );
     };
 
+    if (loading && posts.length === 0) {
+        return (
+            <ThemedView style={[styles.container, styles.centerContainer]}>
+                <ActivityIndicator size="large" color="#4B59B3" />
+            </ThemedView>
+        );
+    }
+
+    if (posts.length === 0 && !loading) {
+        return (
+            <ThemedView style={[styles.container, styles.centerContainer]}>
+                <ThemedText style={styles.noDataText}>No stories available</ThemedText>
+            </ThemedView>
+        );
+    }
+
     return (
         <ThemedView style={styles.container}>
             <FlatList
@@ -375,6 +299,17 @@ export default function PostsList() {
                 keyExtractor={(item) => item.id}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.listContent}
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                onEndReached={loadMore}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={
+                    loading && posts.length > 0 ? (
+                        <View style={styles.loaderFooter}>
+                            <ActivityIndicator size="small" color="#4B59B3" />
+                        </View>
+                    ) : null
+                }
             />
 
             {/* Three Dot Menu Modal */}
@@ -438,6 +373,17 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+    centerContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: 200,
+        paddingVertical: 40,
+    },
+    noDataText: {
+        fontSize: 16,
+        fontFamily: 'tenez',
+        color: '#999',
+    },
     listContent: {
         paddingVertical: 8,
     },
@@ -450,7 +396,24 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         elevation: 1,
         borderRadius: 8,
-        marginBottom: 18
+        marginBottom: 18,
+        position: 'relative',
+    },
+    premiumBadge: {
+        position: 'absolute',
+        top: 12,
+        right: 12,
+        zIndex: 10,
+        backgroundColor: '#FF9500',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 16,
+    },
+    premiumText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: '600',
+        fontFamily: 'CoFoRaffineMedium',
     },
     postHeader: {
         flexDirection: 'row',
@@ -508,20 +471,14 @@ const styles = StyleSheet.create({
     },
     actionContainer: {
         flexDirection: 'row',
-        // justifyContent: 'space-between',
         gap: 24,
         alignItems: 'center',
-        // paddingVertical: 8,
         marginBottom: 8,
-        // borderTopWidth: 1,
-        // borderTopColor: '#F0F0F0',
     },
     actionButton: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        // paddingVertical: 8,
-        // paddingHorizontal: 20,
     },
     actionText: {
         fontSize: 14,
@@ -539,20 +496,21 @@ const styles = StyleSheet.create({
     footerText: {
         fontSize: 14,
         fontFamily: 'tenez',
-        // color: '#999',
     },
     articleBadge: {
-        // backgroundColor: '#F0F0F0',
         paddingHorizontal: 12,
         paddingVertical: 4,
         borderRadius: 16,
-
     },
     articleBadgeText: {
         fontSize: 14,
         fontFamily: 'CoFoRaffineBold',
         color: '#666',
         color: '#3448D6'
+    },
+    loaderFooter: {
+        paddingVertical: 20,
+        alignItems: 'center',
     },
     modalOverlay: {
         flex: 1,
