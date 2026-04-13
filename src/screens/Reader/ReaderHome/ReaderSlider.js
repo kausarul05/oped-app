@@ -1,8 +1,9 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Dimensions,
     Image,
@@ -12,11 +13,13 @@ import {
     View
 } from 'react-native';
 import Carousel from 'react-native-snap-carousel-new';
+import storyService from '../../../services/storyService';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.7;
 const CARD_HEIGHT = 410;
 const SLIDER_WIDTH = 400;
+
 
 import { LogBox } from 'react-native';
 
@@ -30,69 +33,59 @@ export default function ReaderSlider() {
     const [likedItems, setLikedItems] = useState({});
     const [bookmarkedItems, setBookmarkedItems] = useState({});
     const [likeCounts, setLikeCounts] = useState({});
-    const [activeIndex, setActiveIndex] = useState(2);
+    const [activeIndex, setActiveIndex] = useState(0);
+    const [articles, setArticles] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
     const carouselRef = useRef(null);
 
-    // Sample data - replace with your actual data
-    const articles = [
-        {
-            id: '1',
-            title: 'Manchester United',
-            subtitle: 'The Future of Digital Media and the Changing Voice of Independent Journal...',
-            description: 'As technology evolves and reader habits shift, independent platforms are redefining how stories ...',
-            image: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            category: 'Sports',
-            readTime: '5 min read',
-            likes: 124,
-            comments: 18,
-        },
-        {
-            id: '2',
-            title: 'Digital Revolution',
-            subtitle: 'How AI is Transforming the Way We Consume News and Information',
-            description: 'Artificial intelligence is reshaping journalism, bringing personalized content...',
-            image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            category: 'Technology',
-            readTime: '4 min read',
-            likes: 89,
-            comments: 12,
-        },
-        {
-            id: '3',
-            title: 'Global Economy',
-            subtitle: 'Markets React to Changing Political Landscapes Across Europe and Asia',
-            description: 'Investors are watching closely as economic indicators shift...',
-            image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            category: 'Finance',
-            readTime: '6 min read',
-            likes: 56,
-            comments: 7,
-        },
-        {
-            id: '4',
-            title: 'Cultural Renaissance',
-            subtitle: 'How Local Artists Are Gaining Global Recognition',
-            description: 'The internet has democratized art, allowing creators from remote corners...',
-            image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2015&q=80',
-            category: 'Culture',
-            readTime: '7 min read',
-            likes: 42,
-            comments: 5,
-        },
-        {
-            id: '5',
-            title: 'Tech Innovation',
-            subtitle: 'How Startups Are Revolutionizing Work',
-            description: 'New technologies are emerging every day, changing how we interact...',
-            image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            category: 'Technology',
-            readTime: '5 min read',
-            likes: 67,
-            comments: 9,
-        },
-    ];
+    // Fetch stories from API
+    const fetchStories = async (category = 'technology', pageNum = 1, isLoadMore = false) => {
+        try {
+            const result = await storyService.getStories(category, pageNum, 10);
+            
+            if (result.success && result.data) {
+                const newArticles = result.data.map(story => ({
+                    id: story._id,
+                    title: story.author?.name || 'Unknown Author',
+                    subtitle: story.title,
+                    description: story.summary,
+                    image: story.coverImage,
+                    category: story.category,
+                    readTime: `${story.readingTime} min read`,
+                    likes: story.likes || Math.floor(Math.random() * 100) + 50,
+                    comments: story.comments || Math.floor(Math.random() * 20) + 1,
+                    isPremium: story.isPremium,
+                    authorId: story.author?._id,
+                    createdAt: story.createdAt,
+                }));
+                
+                if (isLoadMore) {
+                    setArticles(prev => [...prev, ...newArticles]);
+                } else {
+                    setArticles(newArticles);
+                }
+                
+                // Check if more pages available
+                if (result.pagination) {
+                    setHasMore(pageNum < result.pagination.totalPages);
+                }
+                setPage(pageNum);
+            }
+        } catch (error) {
+            console.error('Error fetching stories:', error);
+            Alert.alert('Error', 'Failed to load stories');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    const toggleLike = (id, currentLikes) => {
+    useEffect(() => {
+        fetchStories('technology', 1);
+    }, []);
+
+    const toggleLike = async (id, currentLikes) => {
         const newLikedState = !likedItems[id];
         setLikedItems(prev => ({
             ...prev,
@@ -104,18 +97,28 @@ export default function ReaderSlider() {
             ...prev,
             [id]: newLikedState ? (prev[id] || currentLikes) + 1 : (prev[id] || currentLikes) - 1
         }));
+
+        // Call API to like/unlike
+        if (newLikedState) {
+            await storyService.likeStory(id);
+        } else {
+            await storyService.unlikeStory(id);
+        }
     };
 
-    const toggleBookmark = (id) => {
+    const toggleBookmark = async (id) => {
+        const newState = !bookmarkedItems[id];
         setBookmarkedItems(prev => ({
             ...prev,
-            [id]: !prev[id]
+            [id]: newState
         }));
 
-        // Show feedback
-        if (!bookmarkedItems[id]) {
+        // Call API to bookmark/unbookmark
+        if (newState) {
+            await storyService.bookmarkStory(id);
             Alert.alert('Saved', 'Article bookmarked successfully!');
         } else {
+            await storyService.unbookmarkStory(id);
             Alert.alert('Removed', 'Bookmark removed');
         }
     };
@@ -123,7 +126,7 @@ export default function ReaderSlider() {
     const handleShare = async (item) => {
         try {
             await Share.share({
-                message: `${item.title}\n\n${item.subtitle}\n\nRead more on HOPED app`,
+                message: `${item.subtitle}\n\n${item.description}\n\nRead more on HOPED app`,
                 title: 'Share Article'
             });
         } catch (error) {
@@ -132,12 +135,29 @@ export default function ReaderSlider() {
     };
 
     const handleComment = (item) => {
-        // Navigate to comments screen or show comments
-        Alert.alert('Comments', `Comments for ${item.title}\nTotal comments: ${item.comments}`);
+        // Navigate to comments screen
+        Alert.alert('Comments', `Comments for ${item.subtitle}\nTotal comments: ${item.comments}`);
     };
 
     const onSnapToItem = (index) => {
         setActiveIndex(index);
+        
+        // Load more when reaching near the end
+        if (index === articles.length - 2 && hasMore && !loading) {
+            setLoading(true);
+            fetchStories('technology', page + 1, true);
+        }
+    };
+
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffTime = Math.abs(now - date);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return `${diffDays} days ago`;
+        return date.toLocaleDateString();
     };
 
     const renderItem = ({ item, index }) => {
@@ -145,7 +165,6 @@ export default function ReaderSlider() {
         const isBookmarked = bookmarkedItems[item.id] || false;
         const isActive = index === activeIndex;
 
-        // Get current like count (either updated or original)
         const currentLikeCount = likeCounts[item.id] !== undefined
             ? likeCounts[item.id]
             : item.likes;
@@ -156,16 +175,19 @@ export default function ReaderSlider() {
                 {
                     backgroundColor: '#FFFFFF',
                     shadowColor: '#000',
-                    // transform: [
-                    //     { scale: isActive ? 1 : 0.95 }
-                    // ]
                 }
-            ]}
-            >
+            ]}>
                 <Image
                     source={{ uri: item.image }}
                     style={styles.cardImage}
                 />
+
+                {/* Premium Badge */}
+                {item.isPremium && (
+                    <View style={styles.premiumBadge}>
+                        <ThemedText style={styles.premiumText}>PREMIUM</ThemedText>
+                    </View>
+                )}
 
                 {/* Bookmark at top right */}
                 <TouchableOpacity
@@ -242,78 +264,37 @@ export default function ReaderSlider() {
         );
     };
 
+    if (loading && articles.length === 0) {
+        return (
+            <ThemedView style={[styles.container, styles.centerContainer]}>
+                <ActivityIndicator size="large" color="#4B59B3" />
+            </ThemedView>
+        );
+    }
+
+    if (articles.length === 0 && !loading) {
+        return (
+            <ThemedView style={[styles.container, styles.centerContainer]}>
+                <ThemedText style={styles.noDataText}>No stories available</ThemedText>
+            </ThemedView>
+        );
+    }
+
     return (
         <ThemedView style={styles.container}>
-            {/* <Carousel
-                ref={carouselRef}
-                data={articles}
-                renderItem={renderItem}
-                sliderWidth={SLIDER_WIDTH}
-                itemWidth={300}
-                layout="default"
-                loop={true}
-                autoplay={true}
-                inactiveSlideScale={0.9}
-                inactiveSlideOpacity={0.7}
-                activeSlideAlignment="center"
-                containerCustomStyle={styles.carouselContainer}
-                contentContainerCustomStyle={styles.carouselContent}
-                removeClippedSubviews={false}
-                onSnapToItem={onSnapToItem}
-                firstItem={2}
-                enableSnap={true}
-                useScrollView={true}
-                scrollEnabled={true}
-                shouldOptimizeUpdates={true}
-                enableMomentum={false}
-                decelerationRate="fast"
-                inactiveSlideShift={0}
-            /> */}
-
-            {/* <Carousel
-                ref={carouselRef}
-                data={articles}
-                renderItem={renderItem}
-                sliderWidth={SLIDER_WIDTH}
-                itemWidth={300}
-                // onSnapToItem = { index => this.setState({activeIndex:index}) }
-                layout={'default'}
-            /> */}
-
             <Carousel
                 layout="stack"
                 ref={carouselRef}
                 data={articles}
                 renderItem={renderItem}
-
                 sliderWidth={SLIDER_WIDTH}
-                itemWidth={350}     // REQUIRED 🔥
-
+                itemWidth={350}
                 inactiveSlideScale={0.9}
                 inactiveSlideOpacity={0.7}
-
-                loop={true}
-                autoplay={true}
-                autoplayInterval={2500}
-
+                loop={false}
+                autoplay={false}
                 onSnapToItem={onSnapToItem}
             />
-
-            {/* Pagination Dots */}
-            {/* <View style={styles.paginationContainer}>
-                {articles.map((_, index) => (
-                    <View
-                        key={index}
-                        style={[
-                            styles.paginationDot,
-                            {
-                                backgroundColor: index === activeIndex ? '#4B59B3' : '#D9D9D9',
-                                width: index === activeIndex ? 24 : 8,
-                            }
-                        ]}
-                    />
-                ))}
-            </View> */}
         </ThemedView>
     );
 }
@@ -321,15 +302,17 @@ export default function ReaderSlider() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        // marginVertical: 16,
         marginTop: -10,
-        // marginBottom: 20
     },
-    carouselContainer: {
-        flexGrow: 1,
-    },
-    carouselContent: {
+    centerContainer: {
+        justifyContent: 'center',
         alignItems: 'center',
+        minHeight: 300,
+    },
+    noDataText: {
+        fontSize: 16,
+        fontFamily: 'tenez',
+        color: '#999',
     },
     cardContainer: {
         width: '100%',
@@ -341,7 +324,6 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         borderWidth: 1,
         borderColor: '#0000001F'
-        // elevation: 1,
     },
     cardImage: {
         width: '100%',
@@ -365,6 +347,21 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         borderRadius: 16,
     },
+    premiumBadge: {
+        position: 'absolute',
+        top: 12,
+        left: 100,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 16,
+        backgroundColor: '#FF9500',
+    },
+    premiumText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: '600',
+        fontFamily: 'CoFoRaffineMedium',
+    },
     categoryText: {
         color: '#FFFFFF',
         fontSize: 11,
@@ -372,7 +369,6 @@ const styles = StyleSheet.create({
         fontFamily: 'CoFoRaffineMedium',
     },
     cardContent: {
-        // flex: 1,
         padding: 12,
         justifyContent: 'space-between',
     },
@@ -380,18 +376,16 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
         fontFamily: 'CoFoRaffineBold',
-        marginBottom: 4,
+        marginBottom: 14,
         color: '#000',
-        marginBottom: 14
     },
     cardSubtitle: {
         fontSize: 13,
         fontWeight: '500',
         fontFamily: 'CoFoRaffineMedium',
-        marginBottom: 0,
+        marginBottom: 14,
         color: '#333',
         lineHeight: 16,
-        marginBottom: 14
     },
     cardDescription: {
         fontSize: 12,
@@ -400,7 +394,6 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         color: '#666',
         lineHeight: 15,
-        // marginBottom: 98
     },
     footerContainer: {
         flexDirection: 'row',
@@ -432,16 +425,5 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontFamily: 'tenez',
         color: '#666',
-    },
-    paginationContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 16,
-        gap: 8,
-    },
-    paginationDot: {
-        height: 8,
-        borderRadius: 4,
     },
 });
