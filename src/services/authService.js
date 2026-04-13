@@ -2,6 +2,24 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from './api';
 
 const authService = {
+    // Login
+    login: async (email, password) => {
+        try {
+            const response = await api.post('/api/v1/reader/auth/login', {
+                email: email,
+                password: password,
+            });
+
+            // Save token if returned
+            if (response.data.token) {
+                await AsyncStorage.setItem('authToken', response.data.token);
+            }
+
+            return { success: true, data: response.data };
+        } catch (error) {
+            return { success: false, error: error.message || 'Login failed' };
+        }
+    },
     // Reader Signup
     readerSignup: async (userData) => {
         try {
@@ -37,12 +55,12 @@ const authService = {
                 email: email,
                 otp: otp,
             });
-            
+
             // Save token if returned
             if (response.data.token) {
                 await AsyncStorage.setItem('authToken', response.data.token);
             }
-            
+
             return { success: true, data: response.data };
         } catch (error) {
             return { success: false, error: error.message || 'Verification failed' };
@@ -57,12 +75,12 @@ const authService = {
                 email: userData.email,
                 photo: userData.photo,
             });
-            
+
             // Save token if returned
             if (response.data.token) {
                 await AsyncStorage.setItem('authToken', response.data.token);
             }
-            
+
             return { success: true, data: response.data };
         } catch (error) {
             return { success: false, error: error.message || 'Social login failed' };

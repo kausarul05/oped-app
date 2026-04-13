@@ -1,28 +1,133 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
-import { Image, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native'; // Add TextInput here
+import { Alert, Image, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import GradientButton from '../../components/GradientButton';
 import {
     ThemedText,
     ThemedView
 } from '../../components/ThemedComponents';
+import { useRole } from '../../context/RoleContext';
 import { useTheme } from '../../hooks/useTheme';
+import authService from '../../services/authService';
 
 export default function LoginScreen() {
     const { colors } = useTheme();
+    const { saveUserRole } = useRole(); // Get saveUserRole from context
     const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const navigation = useNavigation()
+    const [showPassword, setShowPassword] = useState(false);
+    const navigation = useNavigation();
 
-    const handleLogin = () => {
+    const handleLogin = async () => {
+        // Validation
+        if (!email.trim()) {
+            Alert.alert('Error', 'Please enter your email');
+            return;
+        }
+        if (!password.trim()) {
+            Alert.alert('Error', 'Please enter your password');
+            return;
+        }
+
         setLoading(true);
-        setTimeout(() => setLoading(false), 2000);
+
+        try {
+            const result = await authService.login(email.trim().toLowerCase(), password.trim());
+            
+            if (result.success) {
+                // Save user role (assuming API returns role)
+                const userRole = result.data.role || 'reader'; // Default to reader if not specified
+                await saveUserRole(userRole);
+                
+                // Save auth token
+                if (result.data.token) {
+                    await AsyncStorage.setItem('authToken', result.data.token);
+                }
+                
+                // Save user data
+                if (result.data.user) {
+                    await AsyncStorage.setItem('userData', JSON.stringify(result.data.user));
+                }
+                
+                // Save remember me preference
+                if (rememberMe) {
+                    await AsyncStorage.setItem('rememberMe', 'true');
+                    await AsyncStorage.setItem('savedEmail', email.trim().toLowerCase());
+                } else {
+                    await AsyncStorage.removeItem('rememberMe');
+                    await AsyncStorage.removeItem('savedEmail');
+                }
+                
+                Alert.alert('Success', 'Logged in successfully!');
+                // Navigation will be handled automatically by RootNavigator
+            } else {
+                Alert.alert('Login Failed', result.error || 'Invalid email or password');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            Alert.alert('Error', 'Network error. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
+    // Load saved email if remember me was checked
+    React.useEffect(() => {
+        const loadSavedEmail = async () => {
+            try {
+                const saved = await AsyncStorage.getItem('rememberMe');
+                if (saved === 'true') {
+                    const savedEmail = await AsyncStorage.getItem('savedEmail');
+                    if (savedEmail) {
+                        setEmail(savedEmail);
+                        setRememberMe(true);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading saved email:', error);
+            }
+        };
+        loadSavedEmail();
+    }, []);
+
+    // Social Login Handler
+    const handleSocialLogin = async (provider, userData) => {
+        setLoading(true);
+        try {
+            const result = await authService.socialLogin({
+                name: userData.name,
+                email: userData.email,
+                photo: userData.photo,
+            });
+            
+            if (result.success) {
+                // Save user role
+                const userRole = result.data.role || 'reader';
+                await saveUserRole(userRole);
+                
+                // Store user data
+                await AsyncStorage.setItem('userData', JSON.stringify(userData));
+                if (result.data.token) {
+                    await AsyncStorage.setItem('authToken', result.data.token);
+                }
+                
+                Alert.alert('Success', `Logged in with ${provider}`);
+                // Navigation will be handled automatically by RootNavigator
+            } else {
+                Alert.alert('Login Failed', result.error || 'Social login failed');
+            }
+        } catch (error) {
+            console.error('Social login error:', error);
+            Alert.alert('Error', 'Social login failed. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <ThemedView style={styles.container}>
@@ -46,7 +151,7 @@ export default function LoginScreen() {
                     <ThemedText style={styles.inputLabel}>Email Address</ThemedText>
                     <View style={[styles.inputContainer, { borderColor: colors.border }]}>
                         <Ionicons name="mail-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-                        <TextInput  // Changed from ThemedInput to TextInput
+                        <TextInput
                             value={email}
                             onChangeText={setEmail}
                             placeholder="Enter your email address"
@@ -69,12 +174,12 @@ export default function LoginScreen() {
                     <ThemedText style={styles.inputLabel}>Password</ThemedText>
                     <View style={[styles.inputContainer, { borderColor: colors.border }]}>
                         <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-                        <TextInput  // Changed from ThemedInput to TextInput
+                        <TextInput
                             value={password}
                             onChangeText={setPassword}
                             placeholder="**********"
                             placeholderTextColor={colors.textTertiary}
-                            secureTextEntry
+                            secureTextEntry={!showPassword}
                             style={[
                                 styles.input,
                                 {
@@ -83,6 +188,13 @@ export default function LoginScreen() {
                                 }
                             ]}
                         />
+                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                            <Ionicons
+                                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                                size={20}
+                                color={colors.textSecondary}
+                            />
+                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -142,7 +254,12 @@ export default function LoginScreen() {
                                 backgroundColor: colors.socialButtonBg,
                                 borderColor: colors.socialButtonBorder,
                             },
-                        ]}>
+                        ]}
+                        onPress={() => {
+                            // For now, show alert that Google login needs setup
+                            Alert.alert('Info', 'Google login will be available soon');
+                        }}
+                    >
                         <Ionicons name="logo-google" size={24} color={colors.icon} />
                     </TouchableOpacity>
 
@@ -153,7 +270,12 @@ export default function LoginScreen() {
                                 backgroundColor: colors.socialButtonBg,
                                 borderColor: colors.socialButtonBorder,
                             },
-                        ]}>
+                        ]}
+                        onPress={() => {
+                            // For now, show alert that Apple login needs setup
+                            Alert.alert('Info', 'Apple login will be available soon');
+                        }}
+                    >
                         <Ionicons name="logo-apple" size={24} color={colors.icon} />
                     </TouchableOpacity>
                 </View>
@@ -323,7 +445,6 @@ const styles = StyleSheet.create({
     signupLink: {
         fontSize: 16,
         fontWeight: '400',
-        // textDecorationLine: 'underline',
         fontFamily: 'tenez',
         letterSpacing: 1
     },
