@@ -1,8 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Google from 'expo-auth-session/providers/google';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Image, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import GradientButton from '../../components/GradientButton';
 import {
@@ -15,7 +18,7 @@ import authService from '../../services/authService';
 
 export default function SignUp() {
     const { colors } = useTheme();
-    const { saveUserRole } = useRole();
+    const { saveUserRole } = useRole(); // Get saveUserRole from context
     const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const [name, setName] = useState('');
@@ -24,6 +27,72 @@ export default function SignUp() {
     const [showPassword, setShowPassword] = useState(false);
     const [selectedRole, setSelectedRole] = useState('reader');
     const navigation = useNavigation();
+
+    // Google Sign-In Configuration
+    const [request, response, promptAsync] = Google.useAuthRequest({
+        androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com',
+        iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
+        webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+    });
+
+    useEffect(() => {
+        if (response?.type === 'success') {
+            const { authentication } = response;
+            // Get user info from Google
+            fetchUserInfoFromGoogle(authentication.accessToken);
+        }
+    }, [response]);
+
+    const fetchUserInfoFromGoogle = async (accessToken) => {
+        try {
+            const userInfoResponse = await fetch('https://www.googleapis.com/userinfo/v2/me', {
+                headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            const userInfo = await userInfoResponse.json();
+            
+            // Call social login API
+            await handleSocialLogin('google', {
+                name: userInfo.name,
+                email: userInfo.email,
+                photo: userInfo.picture,
+            });
+        } catch (error) {
+            console.error('Error fetching Google user info:', error);
+            Alert.alert('Error', 'Failed to get Google user information');
+            setLoading(false);
+        }
+    };
+
+    // Apple Sign-In Handler
+    const handleAppleLogin = async () => {
+        try {
+            const credential = await AppleAuthentication.signInAsync({
+                requestedScopes: [
+                    AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+                    AppleAuthentication.AppleAuthenticationScope.EMAIL,
+                ],
+            });
+            
+            // Get user info from Apple
+            const userData = {
+                name: credential.fullName?.givenName 
+                    ? `${credential.fullName.givenName} ${credential.fullName.familyName || ''}`.trim()
+                    : 'Apple User',
+                email: credential.email || `${credential.user}@privaterelay.appleid.com`,
+                photo: 'https://randomuser.me/api/portraits/men/1.jpg', // Apple doesn't provide photo
+            };
+            
+            await handleSocialLogin('apple', userData);
+        } catch (error) {
+            if (error.code === 'ERR_CANCELED') {
+                console.log('User canceled Apple login');
+            } else {
+                console.error('Apple login error:', error);
+                Alert.alert('Error', 'Apple login failed');
+            }
+            setLoading(false);
+        }
+    };
 
     const handleSignUp = async () => {
         // Validation
@@ -65,22 +134,54 @@ export default function SignUp() {
             }
 
             if (result.success) {
-                // Save the selected role
-                await saveUserRole(selectedRole);
+                // Store email for verification screen
+                await AsyncStorage.setItem('tempEmail', email.trim().toLowerCase());
                 
-                // Optionally save auth token if returned
-                if (result.data.token) {
-                    // await AsyncStorage.setItem('authToken', result.data.token);
-                }
-                
-                Alert.alert('Success', 'Account created successfully!');
-                // Navigation will be handled automatically by RootNavigator
+                Alert.alert('Success', 'Account created! Please verify your email.');
+                // Navigate to verification screen
+                navigation.navigate('Verification', { 
+                    email: email.trim().toLowerCase(),
+                    role: selectedRole 
+                });
             } else {
                 Alert.alert('Signup Failed', result.error || 'Something went wrong');
             }
         } catch (error) {
             console.error('Signup error:', error);
             Alert.alert('Error', 'Network error. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Social Login Handler - REAL implementation
+    const handleSocialLogin = async (provider, userData) => {
+        setLoading(true);
+        try {
+            const result = await authService.socialLogin({
+                name: userData.name,
+                email: userData.email,
+                photo: userData.photo,
+            });
+            
+            if (result.success) {
+                // Save the selected role
+                await saveUserRole(selectedRole);
+                
+                // Store user data
+                await AsyncStorage.setItem('userData', JSON.stringify(userData));
+                if (result.data.token) {
+                    await AsyncStorage.setItem('authToken', result.data.token);
+                }
+                
+                Alert.alert('Success', `Logged in with ${provider}`);
+                // Navigation will be handled automatically by RootNavigator
+            } else {
+                Alert.alert('Login Failed', result.error || 'Social login failed');
+            }
+        } catch (error) {
+            console.error('Social login error:', error);
+            Alert.alert('Error', 'Social login failed. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -285,7 +386,7 @@ export default function SignUp() {
                         <View style={[styles.line, { backgroundColor: colors.line }]} />
                     </View>
 
-                    {/* Social Login - Icons Only */}
+                    {/* Social Login - Real Implementation */}
                     <View style={styles.socialContainer}>
                         <TouchableOpacity
                             style={[
@@ -294,20 +395,27 @@ export default function SignUp() {
                                     backgroundColor: colors.socialButtonBg,
                                     borderColor: colors.socialButtonBorder,
                                 },
-                            ]}>
+                            ]}
+                            onPress={() => promptAsync()}
+                            disabled={!request}
+                        >
                             <Ionicons name="logo-google" size={24} color={colors.icon} />
                         </TouchableOpacity>
 
-                        <TouchableOpacity
-                            style={[
-                                styles.socialIconButton,
-                                {
-                                    backgroundColor: colors.socialButtonBg,
-                                    borderColor: colors.socialButtonBorder,
-                                },
-                            ]}>
-                            <Ionicons name="logo-apple" size={24} color={colors.icon} />
-                        </TouchableOpacity>
+                        {Platform.OS === 'ios' && (
+                            <TouchableOpacity
+                                style={[
+                                    styles.socialIconButton,
+                                    {
+                                        backgroundColor: colors.socialButtonBg,
+                                        borderColor: colors.socialButtonBorder,
+                                    },
+                                ]}
+                                onPress={handleAppleLogin}
+                            >
+                                <Ionicons name="logo-apple" size={24} color={colors.icon} />
+                            </TouchableOpacity>
+                        )}
                     </View>
 
                     {/* Login Link */}
