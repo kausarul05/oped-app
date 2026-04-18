@@ -40,8 +40,10 @@ const reactionService = {
     removeReaction: async (contentType, contentId) => {
         try {
             const token = await AsyncStorage.getItem('authToken');
-            const response = await api.delete('/api/v1/react/remove', {
-                data: { contentType, contentId },
+            const response = await api.post('/api/v1/react/add', {
+                contentType,
+                contentId
+            }, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
             });
             return { success: true, data: response.data };
