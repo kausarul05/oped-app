@@ -3,19 +3,39 @@ import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     FlatList,
+    Image,
+    Modal,
     RefreshControl,
+    ScrollView,
+    Share,
     StyleSheet,
     TouchableOpacity,
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import liveNewsService from '../../../services/liveNewsService';
 
 export default function LiveNews({ navigation }) {
     const { colors } = useTheme();
     const [refreshing, setRefreshing] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [liveTime, setLiveTime] = useState('');
+    const [liveNewsData, setLiveNewsData] = useState([]);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [totalPages, setTotalPages] = useState(1);
+    
+    // Modal states
+    const [modalVisible, setModalVisible] = useState(false);
+    const [selectedNews, setSelectedNews] = useState(null);
+    const [bookmarked, setBookmarked] = useState(false);
+    const [liked, setLiked] = useState(false);
+    const [likeCount, setLikeCount] = useState(0);
+    const [shareCount, setShareCount] = useState(0);
+    const [modalCurrentTime, setModalCurrentTime] = useState('');
 
     // Update live time every second
     useEffect(() => {
@@ -28,6 +48,7 @@ export default function LiveNews({ navigation }) {
                 hour12: false 
             });
             setLiveTime(timeString);
+            setModalCurrentTime(timeString);
         };
 
         updateLiveTime();
@@ -35,59 +56,125 @@ export default function LiveNews({ navigation }) {
         return () => clearInterval(interval);
     }, []);
 
-    // Live news data matching your image
-    const liveNewsData = [
-        {
-            id: '1',
-            time: '15:07',
-            title: "Kurtulmuş'tan yeni yıl mesajı: TBMM Başkanı Numun Kurtulmuş, yayımladığı yeni yıl mesajında.",
-            description: '"Terörsüz Türkiye" hedefine ulaşmayı umduklarını ifade etti. Kurtulmuş, mesajında Türkiye\'nin terörle mücadelesine vurgu yaparak yeni yılda bu hedef doğrultusunda kararlılığın süreceğini dile getirdi.',
-            isBreaking: true,
-        },
-        {
-            id: '2',
-            time: '15:07',
-            title: 'Adalet Bakanı Tunç\'un açıklaması: Adalet Bakanı Yılmaz Tunç, felç kalma riski bulunduğu belirtilen şehir plancısı Tayfun Kahraman\'ın sağlık durumuna ilişkin son kararı Adli Tıp Kurumu\'nun vereceğini.',
-            description: 'Tunç, Kahraman\'ın avukatının kamuoyuna yansıyan "felç kalma riski var" açıklamasının ardından sürecin Adli Tıp raporları doğrultusunda yürütüleceğini ifade etti.',
-            isBreaking: false,
-        },
-        {
-            id: '3',
-            time: '12:07',
-            title: 'Adalet Bakanı Tunç\'un açıklaması: Adalet Bakanı Yılmaz Tunç, felç kalma riski bulunduğu belirtilen şehir plancısı Tayfun Kahraman\'ın sağlık durumuna ilişkin son kararı Adli Tıp Kurumu\'nun vereceğini.',
-            description: 'Tunç, Kahraman\'ın avukatının kamuoyuna yansıyan "felç kalma riski var" açıklamasının ardından sürecin Adli Tıp raporları doğrultusunda yürütüleceğini ifade etti.',
-            isBreaking: false,
-        },
-        {
-            id: '4',
-            time: '10:30',
-            title: 'Cumhurbaşkanı Erdoğan\'dan yeni yıl mesajı: Cumhurbaşkanı Recep Tayyip Erdoğan, yayımladığı video mesajında.',
-            description: '2024 yılının Türkiye ve tüm insanlık için hayırlara vesile olmasını dileyen Erdoğan, ekonomi ve dış politika başta olmak üzere birçok alanda önemli adımlar atıldığını belirtti.',
-            isBreaking: false,
-        },
-        {
-            id: '5',
-            time: '09:15',
-            title: 'Merkez Bankası faiz kararını açıkladı: Türkiye Cumhuriyet Merkez Bankası (TCMB) Para Politikası Kurulu, politika faizini yüzde 42,5 seviyesinde sabit tuttu.',
-            description: 'Kurul, enflasyon görünümünde belirgin ve kalıcı bir iyileşme sağlanana kadar sıkı para politikası duruşunun sürdürüleceğini vurguladı.',
-            isBreaking: false,
-        },
-        {
-            id: '6',
-            time: '08:45',
-            title: 'İstanbul\'da yoğun sis ulaşımı aksattı: Sabah saatlerinden itibaren etkili olan yoğun sis nedeniyle İstanbul Boğazı\'nda gemi trafiği geçici olarak durduruldu.',
-            description: 'Havayolu ulaşımında da aksamalar yaşanırken, yetkililer sürücüleri görüş mesafesinin düşük olduğu yollarda dikkatli olmaları konusunda uyardı.',
-            isBreaking: false,
-        },
-    ];
+    // Fetch live news from API
+    useEffect(() => {
+        fetchLiveNews(1);
+    }, []);
+
+    const fetchLiveNews = async (pageNum = 1, isLoadMore = false) => {
+        try {
+            const result = await liveNewsService.getLiveNews(pageNum, 20);
+            
+            if (result.success && result.data) {
+                const formattedNews = result.data.map((news, index) => ({
+                    id: news._id,
+                    time: formatTime(news.postedAt || news.createdAt),
+                    title: news.content.substring(0, 100) + (news.content.length > 100 ? '...' : ''),
+                    content: news.content,
+                    isBreaking: index === 0,
+                    author: news.author?.name || 'Unknown',
+                    authorImage: news.author?.profileImage || 'https://randomuser.me/api/portraits/men/1.jpg',
+                    postedAt: news.postedAt || news.createdAt,
+                    createdAt: news.createdAt,
+                    likes: news.likes || Math.floor(Math.random() * 100) + 10,
+                    shares: news.shares || Math.floor(Math.random() * 20) + 5,
+                }));
+                
+                if (isLoadMore) {
+                    setLiveNewsData(prev => [...prev, ...formattedNews]);
+                } else {
+                    setLiveNewsData(formattedNews);
+                }
+                
+                if (result.pagination) {
+                    setHasMore(pageNum < result.pagination.totalPages);
+                    setTotalPages(result.pagination.totalPages);
+                }
+                setPage(pageNum);
+            }
+        } catch (error) {
+            console.error('Error fetching live news:', error);
+            Alert.alert('Error', 'Failed to load live news');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    const formatTime = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: false 
+        });
+    };
+
+    const formatPostedTime = (dateString) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins} min ago`;
+        if (diffHours < 24) return `${diffHours} hours ago`;
+        return `${diffDays} days ago`;
+    };
 
     const onRefresh = () => {
         setRefreshing(true);
-        // Simulate fetching new data
-        setTimeout(() => {
-            setRefreshing(false);
-            Alert.alert('Refreshed', 'Live news updated!');
-        }, 2000);
+        setPage(1);
+        fetchLiveNews(1);
+    };
+
+    const loadMore = () => {
+        if (hasMore && !loading && !refreshing) {
+            fetchLiveNews(page + 1, true);
+        }
+    };
+
+    const openNewsModal = (news) => {
+        setSelectedNews(news);
+        setLikeCount(news.likes);
+        setShareCount(news.shares);
+        setLiked(false);
+        setBookmarked(false);
+        setModalVisible(true);
+    };
+
+    const closeModal = () => {
+        setModalVisible(false);
+        setSelectedNews(null);
+    };
+
+    const toggleLike = () => {
+        const newLikedState = !liked;
+        setLiked(newLikedState);
+        setLikeCount(newLikedState ? likeCount + 1 : likeCount - 1);
+    };
+
+    const toggleBookmark = () => {
+        const newState = !bookmarked;
+        setBookmarked(newState);
+        Alert.alert(
+            newState ? 'Saved' : 'Removed',
+            newState ? 'News saved to bookmarks!' : 'Bookmark removed'
+        );
+    };
+
+    const handleShare = async () => {
+        try {
+            await Share.share({
+                message: `${selectedNews?.content}\n\nRead more on HOPED app`,
+                title: 'Share Live News'
+            });
+            setShareCount(shareCount + 1);
+        } catch (error) {
+            console.log('Error sharing:', error);
+        }
     };
 
     const renderNewsItem = ({ item, index }) => (
@@ -96,7 +183,7 @@ export default function LiveNews({ navigation }) {
                 styles.newsItem,
                 index === 0 && styles.firstNewsItem
             ]}
-            onPress={() => Alert.alert('News Detail', item.title)}
+            onPress={() => openNewsModal(item)}
         >
             {/* Time Column */}
             <View style={styles.timeColumn}>
@@ -111,18 +198,28 @@ export default function LiveNews({ navigation }) {
             {/* Content Column */}
             <View style={styles.contentColumn}>
                 <ThemedText style={styles.newsTitle}>{item.title}</ThemedText>
-                <ThemedText style={styles.newsDescription}>{item.description}</ThemedText>
+                <ThemedText style={styles.newsDescription} numberOfLines={3}>
+                    {item.content}
+                </ThemedText>
                 
                 {/* Live Indicator for first item */}
                 {index === 0 && (
                     <View style={styles.liveIndicator}>
                         <View style={styles.liveDot} />
-                        <ThemedText style={styles.liveText}>A few seconds ago</ThemedText>
+                        <ThemedText style={styles.liveText}>{formatPostedTime(item.createdAt)}</ThemedText>
                     </View>
                 )}
             </View>
         </TouchableOpacity>
     );
+
+    if (loading && liveNewsData.length === 0) {
+        return (
+            <ThemedView style={[styles.container, styles.centerContainer]}>
+                <ActivityIndicator size="large" color="#4B59B3" />
+            </ThemedView>
+        );
+    }
 
     return (
         <ThemedView style={styles.container}>
@@ -165,8 +262,130 @@ export default function LiveNews({ navigation }) {
                         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                     }
                     ItemSeparatorComponent={() => <View style={styles.separator} />}
+                    onEndReached={loadMore}
+                    onEndReachedThreshold={0.5}
+                    ListFooterComponent={
+                        loading && liveNewsData.length > 0 ? (
+                            <View style={styles.loaderFooter}>
+                                <ActivityIndicator size="small" color="#4B59B3" />
+                            </View>
+                        ) : null
+                    }
                 />
             </SafeAreaView>
+
+            {/* News Detail Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={closeModal}
+            >
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        {/* Modal Header */}
+                        <View style={styles.modalHeader}>
+                            <TouchableOpacity onPress={closeModal} style={styles.modalCloseButton}>
+                                <Ionicons name="close" size={24} color="#000" />
+                            </TouchableOpacity>
+                            <View style={styles.modalLiveIndicator}>
+                                <View style={styles.modalLiveDot} />
+                                <ThemedText style={styles.modalLiveText}>LIVE</ThemedText>
+                            </View>
+                            <View style={styles.modalHeaderActions}>
+                                <TouchableOpacity onPress={toggleBookmark} style={styles.modalHeaderAction}>
+                                    <Ionicons 
+                                        name={bookmarked ? "bookmark" : "bookmark-outline"} 
+                                        size={20} 
+                                        color={bookmarked ? "#4B59B3" : "#000"} 
+                                    />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={handleShare} style={styles.modalHeaderAction}>
+                                    <Ionicons name="share-outline" size={20} color="#000" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScrollContent}>
+                            {/* Live Time Bar in Modal */}
+                            <View style={styles.modalLiveTimeBar}>
+                                <Ionicons name="radio-outline" size={14} color="#FF3B30" />
+                                <ThemedText style={styles.modalLiveTimeText}>{modalCurrentTime}</ThemedText>
+                                <View style={styles.modalLiveNowBadge}>
+                                    <View style={styles.modalLiveNowDot} />
+                                    <ThemedText style={styles.modalLiveNowText}>LIVE NOW</ThemedText>
+                                </View>
+                            </View>
+
+                            {/* Breaking Badge */}
+                            <View style={styles.modalBreakingContainer}>
+                                <View style={styles.modalBreakingBadge}>
+                                    <ThemedText style={styles.modalBreakingText}>BREAKING NEWS</ThemedText>
+                                </View>
+                                <ThemedText style={styles.modalPostedTime}>
+                                    {formatPostedTime(selectedNews?.createdAt)}
+                                </ThemedText>
+                            </View>
+
+                            {/* News Content */}
+                            <View style={styles.modalContentContainer}>
+                                <ThemedText style={styles.modalNewsContent}>
+                                    {selectedNews?.content}
+                                </ThemedText>
+                            </View>
+
+                            {/* Author Info */}
+                            <View style={styles.modalAuthorSection}>
+                                <Image source={{ uri: selectedNews?.authorImage }} style={styles.modalAuthorImage} />
+                                <View style={styles.modalAuthorInfo}>
+                                    <ThemedText style={styles.modalAuthorName}>{selectedNews?.author}</ThemedText>
+                                    <ThemedText style={styles.modalAuthorRole}>Live News Reporter</ThemedText>
+                                </View>
+                            </View>
+
+                            {/* Action Buttons */}
+                            {/* <View style={styles.modalActionContainer}>
+                                <TouchableOpacity 
+                                    style={[styles.modalActionButton, liked && styles.modalActionButtonActive]} 
+                                    onPress={toggleLike}
+                                >
+                                    <Ionicons 
+                                        name={liked ? "heart" : "heart-outline"} 
+                                        size={20} 
+                                        color={liked ? "#FF3B30" : "#666"} 
+                                    />
+                                    <ThemedText style={[styles.modalActionText, liked && { color: '#FF3B30' }]}>
+                                        {likeCount}
+                                    </ThemedText>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={styles.modalActionButton}>
+                                    <Ionicons name="chatbubble-outline" size={20} color="#666" />
+                                    <ThemedText style={styles.modalActionText}>Comment</ThemedText>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={styles.modalActionButton} onPress={handleShare}>
+                                    <Ionicons name="share-social-outline" size={20} color="#666" />
+                                    <ThemedText style={styles.modalActionText}>Share</ThemedText>
+                                </TouchableOpacity>
+                            </View> */}
+
+                            {/* Info Cards */}
+                            <View style={styles.modalInfoSection}>
+                                <View style={styles.modalInfoCard}>
+                                    <Ionicons name="time-outline" size={18} color="#4B59B3" />
+                                    <View style={styles.modalInfoContent}>
+                                        <ThemedText style={styles.modalInfoTitle}>Published</ThemedText>
+                                        <ThemedText style={styles.modalInfoText}>
+                                            {selectedNews && new Date(selectedNews.postedAt).toLocaleString()}
+                                        </ThemedText>
+                                    </View>
+                                </View>
+                            </View>
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
         </ThemedView>
     );
 }
@@ -179,6 +398,10 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: '#FFFFFF',
+    },
+    centerContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     header: {
         flexDirection: 'row',
@@ -341,5 +564,223 @@ const styles = StyleSheet.create({
         height: 1,
         backgroundColor: '#F0F0F0',
         marginVertical: 8,
+    },
+    loaderFooter: {
+        paddingVertical: 20,
+        alignItems: 'center',
+    },
+    // Modal Styles
+    modalContainer: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        height: '90%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    modalCloseButton: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalLiveIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FF3B30',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 12,
+        gap: 4,
+    },
+    modalLiveDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#FFFFFF',
+    },
+    modalLiveText: {
+        fontSize: 10,
+        fontFamily: 'CoFoRaffineBold',
+        color: '#FFFFFF',
+    },
+    modalHeaderActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    modalHeaderAction: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalScrollContent: {
+        paddingBottom: 30,
+    },
+    modalLiveTimeBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFF0F0',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        gap: 8,
+    },
+    modalLiveTimeText: {
+        fontSize: 14,
+        fontFamily: 'tenez',
+        color: '#FF3B30',
+        flex: 1,
+    },
+    modalLiveNowBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FF3B30',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        gap: 4,
+    },
+    modalLiveNowDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#FFFFFF',
+    },
+    modalLiveNowText: {
+        fontSize: 10,
+        fontFamily: 'CoFoRaffineBold',
+        color: '#FFFFFF',
+    },
+    modalBreakingContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    modalBreakingBadge: {
+        backgroundColor: '#FF3B30',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 4,
+    },
+    modalBreakingText: {
+        fontSize: 12,
+        fontFamily: 'CoFoRaffineBold',
+        color: '#FFFFFF',
+    },
+    modalPostedTime: {
+        fontSize: 12,
+        fontFamily: 'tenez',
+        color: '#999',
+    },
+    modalContentContainer: {
+        paddingHorizontal: 16,
+        paddingVertical: 24,
+    },
+    modalNewsContent: {
+        fontSize: 16,
+        fontFamily: 'tenez',
+        color: '#333',
+        lineHeight: 24,
+    },
+    modalAuthorSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#F0F0F0',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+        gap: 12,
+    },
+    modalAuthorImage: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+    },
+    modalAuthorInfo: {
+        flex: 1,
+    },
+    modalAuthorName: {
+        fontSize: 16,
+        fontWeight: '600',
+        fontFamily: 'CoFoRaffineBold',
+        color: '#000',
+        marginBottom: 4,
+    },
+    modalAuthorRole: {
+        fontSize: 12,
+        fontFamily: 'tenez',
+        color: '#999',
+    },
+    modalActionContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    modalActionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+    },
+    modalActionButtonActive: {
+        backgroundColor: '#FFF0F0',
+    },
+    modalActionText: {
+        fontSize: 13,
+        fontFamily: 'CoFoRaffineMedium',
+        color: '#666',
+    },
+    modalInfoSection: {
+        paddingHorizontal: 16,
+        paddingVertical: 20,
+    },
+    modalInfoCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: '#F8F9FA',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#F0F0F0',
+    },
+    modalInfoContent: {
+        flex: 1,
+    },
+    modalInfoTitle: {
+        fontSize: 12,
+        fontFamily: 'tenez',
+        color: '#999',
+        marginBottom: 2,
+    },
+    modalInfoText: {
+        fontSize: 14,
+        fontFamily: 'CoFoRaffineMedium',
+        color: '#333',
     },
 });
