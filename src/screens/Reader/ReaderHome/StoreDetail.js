@@ -24,8 +24,8 @@ export default function StoryDetail({ route, navigation }) {
     const { colors } = useTheme();
     const { postId } = route.params || {};
 
-    console.log("postid", postId)
-    
+    // console.log("postid", postId)
+
     const [liked, setLiked] = useState(false);
     const [bookmarked, setBookmarked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
@@ -47,10 +47,10 @@ export default function StoryDetail({ route, navigation }) {
     const fetchStoryDetail = async () => {
         try {
             const result = await storyService.getStoryById(postId);
-            
+
             if (result.data) {
                 const storyData = result.data?.data;
-                console.log("store Data", storyData)
+                // console.log("store Data", storyData)
                 setStory({
                     id: storyData._id,
                     authorName: storyData.author?.name || 'Unknown Author',
@@ -78,14 +78,14 @@ export default function StoryDetail({ route, navigation }) {
         }
     };
 
-    console.log("store", story)
+    // console.log("store", story)
 
     const formatDate = (dateString) => {
         const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { 
-            day: 'numeric', 
-            month: 'short', 
-            year: 'numeric' 
+        return date.toLocaleDateString('en-US', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
         });
     };
 
@@ -386,7 +386,15 @@ export default function StoryDetail({ route, navigation }) {
                         <ThemedText style={styles.summary}>{story.summary}</ThemedText>
                     </View>
 
-                    <TouchableOpacity style={styles.authorSection}>
+                    <TouchableOpacity
+                        style={styles.authorSection}
+                        onPress={() => navigation.navigate('AuthorProfile', {
+                            authorId: story.authorId,
+                            authorName: story.authorName,
+                            authorImage: story.authorImage,
+                            authorBio: story.authorBio
+                        })}
+                    >
                         <View style={styles.authorCard}>
                             <View style={styles.authorInfo}>
                                 <ThemedText style={styles.authorName}>{story.authorName}</ThemedText>
@@ -459,20 +467,30 @@ export default function StoryDetail({ route, navigation }) {
                         />
                     </View>
 
-                    <View style={styles.bottomAuthorSection}>
-                        <ThemedText style={styles.sectionTitle}>Author</ThemedText>
-                        <View style={[styles.bottomAuthorCard, { elevation: 1, padding: 8, borderRadius: 12 }]}>
-                            <View>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                                    <Image source={{ uri: story.authorImage }} style={styles.bottomAuthorImage} />
-                                    <ThemedText style={styles.bottomAuthorName}>{story.authorName}</ThemedText>
-                                </View>
-                                <View style={styles.bottomAuthorInfo}>
-                                    <ThemedText style={styles.bottomAuthorBio}>{story.authorBio}</ThemedText>
+                    <TouchableOpacity
+                        style={styles.bottomAuthorSection}
+                        onPress={() => navigation.navigate('AuthorProfile', {
+                            authorId: story.authorId,
+                            authorName: story.authorName,
+                            authorImage: story.authorImage,
+                            authorBio: story.authorBio
+                        })}
+                    >
+                        <View style={styles.bottomAuthorSection}>
+                            <ThemedText style={styles.sectionTitle}>Author</ThemedText>
+                            <View style={[styles.bottomAuthorCard, { elevation: 1, padding: 8, borderRadius: 12 }]}>
+                                <View>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                                        <Image source={{ uri: story.authorImage }} style={styles.bottomAuthorImage} />
+                                        <ThemedText style={styles.bottomAuthorName}>{story.authorName}</ThemedText>
+                                    </View>
+                                    <View style={styles.bottomAuthorInfo}>
+                                        <ThemedText style={styles.bottomAuthorBio}>{story.authorBio}</ThemedText>
+                                    </View>
                                 </View>
                             </View>
                         </View>
-                    </View>
+                    </TouchableOpacity>
 
                     {story.tags && story.tags.length > 0 && (
                         <View style={styles.keywordsSection}>

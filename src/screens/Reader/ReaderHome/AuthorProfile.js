@@ -1,8 +1,9 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     FlatList,
     Image,
@@ -13,83 +14,108 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import authService from '../../../services/authService';
+import storyService from '../../../services/storyService';
 
 export default function AuthorProfile({ route, navigation }) {
     const { colors } = useTheme();
+    const { authorId, authorName, authorImage, authorBio } = route.params || {};
     const [activeTab, setActiveTab] = useState('Stories');
     const [menuVisible, setMenuVisible] = useState(false);
+    const [author, setAuthor] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [stories, setStories] = useState([]);
+    const [podcasts, setPodcasts] = useState([]);
 
-    // Mock author data
-    const author = {
-        id: '1',
-        name: 'Eric Lach',
-        formerTitle: 'FORMERLY MasterChef',
-        coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2020&q=80',
-        profileImage: 'https://randomuser.me/api/portraits/women/1.jpg',
-        bio: 'Katy Waldman is a culture and lifestyle writer who explores modern trends, human stories, and creative perspectives. Her writing focuses on thoughtful analysis and engaging storytelling. She brings clarity and insight to complex topics through well-researched and compelling articles.',
+    // Fetch author profile from API
+    useEffect(() => {
+        fetchAuthorProfile();
+        fetchAuthorStories();
+    }, [authorId]);
+
+    const fetchAuthorProfile = async () => {
+        try {
+            // If we have author data from params, use it
+            if (authorName && authorImage) {
+                setAuthor({
+                    id: authorId,
+                    name: authorName,
+                    profileImage: authorImage,
+                    bio: authorBio || 'No bio available',
+                    coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3&auto=format&fit=crop&w=2020&q=80',
+                });
+                setLoading(false);
+                return;
+            }
+
+            // Otherwise fetch from API
+            const result = await authService.getProfile();
+            if (result.success && result.data) {
+                const profileData = result.data;
+                setAuthor({
+                    id: profileData._id,
+                    name: profileData.name,
+                    profileImage: profileData.profileImage,
+                    bio: profileData.bio || 'No bio available',
+                    coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3&auto=format&fit=crop&w=2020&q=80',
+                    email: profileData.email,
+                    isVerified: profileData.isVerified,
+                    isSubscribed: profileData.isSubscribed,
+                });
+            } else {
+                // Fallback mock data
+                setAuthor({
+                    id: '1',
+                    name: authorName || 'Eric Lach',
+                    profileImage: authorImage || 'https://randomuser.me/api/portraits/women/1.jpg',
+                    bio: authorBio || 'Writer and storyteller passionate about digital media and independent journalism.',
+                    coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3&auto=format&fit=crop&w=2020&q=80',
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching author profile:', error);
+            // Fallback mock data
+            setAuthor({
+                id: authorId || '1',
+                name: authorName || 'Eric Lach',
+                profileImage: authorImage || 'https://randomuser.me/api/portraits/women/1.jpg',
+                bio: authorBio || 'Writer and storyteller passionate about digital media and independent journalism.',
+                coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3&auto=format&fit=crop&w=2020&q=80',
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
-    // Mock stories data
-    const stories = [
-        {
-            id: '1',
-            title: 'The Future of Digital Media and the Changing Voice of Independent Journal...',
-            type: 'Featured Story',
-            image: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-        {
-            id: '2',
-            title: 'The Future of Digital Media and the Changing Voice of Independent Journal...',
-            type: 'Featured Article',
-            image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-        {
-            id: '3',
-            title: 'The Future of Digital Media and the Changing Voice of Independent Journal...',
-            type: 'Featuring Story',
-            image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-        {
-            id: '4',
-            title: 'The Future of Digital Media and the Changing Voice of Independent Journal...',
-            type: 'Featured Story',
-            image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2015&q=80',
-        },
-        {
-            id: '5',
-            title: 'The Future of Digital Media and the Changing Voice of Independent Journal...',
-            type: 'Featuring Story',
-            image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-    ];
-
-    // Mock podcasts data
-    const podcasts = [
-        {
-            id: '1',
-            title: 'The Future of Digital Media and the Changing Voice of Independent Journal...',
-            type: 'Featured Podcast',
-            image: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-        {
-            id: '2',
-            title: 'The Future of Digital Media and the Changing Voice of Independent Journal...',
-            type: 'Featured Podcast',
-            image: 'https://images.unsplash.com/photo-1589903308904-1010c2294adc?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-        {
-            id: '3',
-            title: 'The Future of Digital Media and the Changing Voice of Independent Journal...',
-            type: 'Featured Podcast',
-            image: 'https://images.unsplash.com/photo-1590602847861-f3579e41b79e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-    ];
+    const fetchAuthorStories = async () => {
+        try {
+            // Fetch stories by author
+            const result = await storyService.getStories('', 1, 10);
+            if (result.success && result.data) {
+                const authorStories = result.data.filter(story => story.author?._id === authorId);
+                setStories(authorStories.map(story => ({
+                    id: story._id,
+                    title: story.title,
+                    type: story.isPremium ? 'Premium Story' : 'Featured Story',
+                    image: story.coverImage,
+                })));
+            } else {
+                // Mock data
+                setStories([
+                    { id: '1', title: 'The Future of Digital Media and the Changing Voice of Independent Journalism...', type: 'Featured Story', image: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80' },
+                    { id: '2', title: 'The Future of Digital Media and the Changing Voice of Independent Journalism...', type: 'Featured Article', image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80' },
+                ]);
+            }
+        } catch (error) {
+            console.error('Error fetching author stories:', error);
+        }
+    };
 
     const handleMenuOption = (option) => {
         setMenuVisible(false);
         switch(option) {
             case 'follow':
-                Alert.alert('Follow', `You are now following ${author.name}`);
+                Alert.alert('Follow', `You are now following ${author?.name}`);
                 break;
             case 'feedback':
                 Alert.alert('Give Feedback', 'Thank you for your feedback!');
@@ -98,13 +124,16 @@ export default function AuthorProfile({ route, navigation }) {
                 Alert.alert('Report', 'Thank you for reporting. We will review this profile.');
                 break;
             case 'block':
-                Alert.alert('Block', `You have blocked ${author.name}`);
+                Alert.alert('Block', `You have blocked ${author?.name}`);
                 break;
         }
     };
 
     const renderStoryItem = ({ item }) => (
-        <TouchableOpacity style={styles.storyItem}>
+        <TouchableOpacity 
+            style={styles.storyItem}
+            onPress={() => navigation.navigate('StoryDetail', { postId: item.id })}
+        >
             <Image source={{ uri: item.image }} style={styles.storyImage} />
             <View style={styles.storyContent}>
                 <ThemedText style={styles.storyTitle}>{item.title}</ThemedText>
@@ -112,6 +141,14 @@ export default function AuthorProfile({ route, navigation }) {
             </View>
         </TouchableOpacity>
     );
+
+    if (loading) {
+        return (
+            <ThemedView style={[styles.container, styles.centerContainer]}>
+                <ActivityIndicator size="large" color="#4B59B3" />
+            </ThemedView>
+        );
+    }
 
     return (
         <ThemedView style={styles.container}>
@@ -129,29 +166,28 @@ export default function AuthorProfile({ route, navigation }) {
 
                 <ScrollView showsVerticalScrollIndicator={false}>
                     {/* Cover Image */}
-                    <Image source={{ uri: author.coverImage }} style={styles.coverImage} />
+                    <Image source={{ uri: author?.coverImage }} style={styles.coverImage} />
 
                     {/* Profile Info Section */}
                     <View style={styles.profileInfoContainer}>
                         {/* Profile Image - Positioned to overlap cover */}
                         <View style={styles.profileImageWrapper}>
-                            <Image source={{ uri: author.profileImage }} style={styles.profileImage} />
+                            <Image source={{ uri: author?.profileImage }} style={styles.profileImage} />
                         </View>
 
-                        {/* Author Name and Former Title */}
+                        {/* Author Name */}
                         <View style={styles.nameContainer}>
-                            <ThemedText style={styles.authorName}>{author.name}</ThemedText>
-                            {/* <ThemedText style={styles.formerTitle}>{author.formerTitle}</ThemedText> */}
+                            <ThemedText style={styles.authorName}>{author?.name}</ThemedText>
                         </View>
 
                         {/* Author Bio */}
-                        <ThemedText style={styles.authorBio}>{author.bio}</ThemedText>
+                        <ThemedText style={styles.authorBio}>{author?.bio}</ThemedText>
 
                         {/* Follow and Feedback Buttons */}
                         <View style={styles.actionButtonsContainer}>
                             <TouchableOpacity 
                                 style={styles.followButton}
-                                onPress={() => Alert.alert('Follow', `You are now following ${author.name}`)}
+                                onPress={() => Alert.alert('Follow', `You are now following ${author?.name}`)}
                             >
                                 <Ionicons name="person-add-outline" size={18} color="#FFFFFF" />
                                 <ThemedText style={styles.followButtonText}>Follow author</ThemedText>
@@ -174,7 +210,7 @@ export default function AuthorProfile({ route, navigation }) {
                             onPress={() => setActiveTab('Stories')}
                         >
                             <ThemedText style={[styles.tabText, activeTab === 'Stories' && styles.activeTabText]}>
-                                Stories
+                                Stories ({stories.length})
                             </ThemedText>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -182,7 +218,7 @@ export default function AuthorProfile({ route, navigation }) {
                             onPress={() => setActiveTab('Podcasts')}
                         >
                             <ThemedText style={[styles.tabText, activeTab === 'Podcasts' && styles.activeTabText]}>
-                                Podcasts
+                                Podcasts ({podcasts.length})
                             </ThemedText>
                         </TouchableOpacity>
                     </View>
@@ -280,6 +316,10 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: '#FFFFFF',
+    },
+    centerContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     header: {
         flexDirection: 'row',
@@ -485,9 +525,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F0F0F0',
         marginHorizontal: 16,
     },
-    blockItem: {
-        // No extra styling
-    },
+    blockItem: {},
     blockText: {
         color: '#FF3B30',
     },
