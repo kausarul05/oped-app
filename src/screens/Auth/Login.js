@@ -43,15 +43,18 @@ export default function LoginScreen() {
                 // Save user role (assuming API returns role)
                 const userRole = result.data.role || 'reader'; // Default to reader if not specified
                 await saveUserRole(userRole);
+
+                console.log("result", result)
+                console.log("token", result.data.access_token)
                 
                 // Save auth token
-                if (result.data.token) {
-                    await AsyncStorage.setItem('authToken', result.data.token);
+                if (result.data?.access_token) {
+                    await AsyncStorage.setItem('authToken', result?.data?.access_token);
                 }
                 
                 // Save user data
-                if (result.data.user) {
-                    await AsyncStorage.setItem('userData', JSON.stringify(result.data.user));
+                if (result.data?.data) {
+                    await AsyncStorage.setItem('userData', JSON.stringify(result.data));
                 }
                 
                 // Save remember me preference
