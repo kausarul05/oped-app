@@ -1,7 +1,6 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import {
     Alert,
@@ -9,43 +8,45 @@ import {
     StyleSheet,
     TextInput,
     TouchableOpacity,
-    View
+    View,
+    ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import liveNewsService from '../../../services/liveNewsService';
 
 export default function AddLiveNews({ navigation }) {
     const { colors } = useTheme();
     const [newsContent, setNewsContent] = useState('');
-    const [newsSummary, setNewsSummary] = useState('');
-    const [selectedImage, setSelectedImage] = useState(null);
-    const [isLive, setIsLive] = useState(true);
+    const [loading, setLoading] = useState(false);
 
-    const pickImage = async () => {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-        if (status !== 'granted') {
-            Alert.alert('Permission needed', 'Please grant camera roll permissions to upload an image.');
-            return;
-        }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            quality: 1,
-        });
-
-        if (!result.canceled) {
-            setSelectedImage(result.assets[0].uri);
-        }
-    };
-
-    const handlePublish = () => {
+    const handlePublish = async () => {
         if (!newsContent.trim()) {
             Alert.alert('Error', 'Please enter news content');
             return;
         }
-        Alert.alert('Success', 'Live news published successfully!');
-        navigation.goBack();
+
+        if (newsContent.trim().length < 10) {
+            Alert.alert('Error', 'News content must be at least 10 characters');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const result = await liveNewsService.createLiveNews(newsContent.trim());
+            
+            if (result.success) {
+                Alert.alert('Success', 'Live news published successfully!');
+                navigation.goBack();
+            } else {
+                Alert.alert('Error', result.error || 'Failed to publish live news');
+            }
+        } catch (error) {
+            console.error('Error publishing live news:', error);
+            Alert.alert('Error', 'Failed to publish live news. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -60,103 +61,44 @@ export default function AddLiveNews({ navigation }) {
                     <TouchableOpacity
                         style={styles.publishButton}
                         onPress={handlePublish}
+                        disabled={loading}
                     >
-                        <ThemedText style={styles.publishText}>Publish</ThemedText>
+                        {loading ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                            <ThemedText style={styles.publishText}>Publish</ThemedText>
+                        )}
                     </TouchableOpacity>
                 </View>
-
-                {/* Live Indicator */}
-                {/* <View style={styles.liveIndicator}>
-                    <View style={styles.liveDot} />
-                    <ThemedText style={styles.liveText}>LIVE</ThemedText>
-                </View> */}
 
                 <ScrollView
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContent}
                 >
-                    {/* Image Upload Section */}
-                    {/* <View style={styles.section}>
-                        <ThemedText style={styles.sectionTitle}>News Image</ThemedText>
-                        
-                        <TouchableOpacity
-                            style={styles.uploadBox}
-                            onPress={pickImage}
-                        >
-                            {selectedImage ? (
-                                <Image source={{ uri: selectedImage }} style={styles.uploadedImage} />
-                            ) : (
-                                <>
-                                    <View style={styles.uploadIconContainer}>
-                                        <Ionicons name="camera-outline" size={32} color="#FF3B30" />
-                                    </View>
-                                    <ThemedText style={styles.uploadText}>Add Photo</ThemedText>
-                                </>
-                            )}
-                        </TouchableOpacity>
-                    </View> */}
-
-                    {/* News Content Section */}
-                    {/* <View style={styles.section}>
-                        <ThemedText style={styles.sectionTitle}>News Content</ThemedText>
-                        <TextInput
-                            style={styles.contentInput}
-                            placeholder="Enter your news content..."
-                            placeholderTextColor="#999"
-                            value={newsContent}
-                            onChangeText={setNewsContent}
-                            multiline
-                            numberOfLines={4}
-                            textAlignVertical="top"
-                        />
-                    </View> */}
-
                     {/* News Summary Section */}
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            <ThemedText style={styles.sectionTitle}>News Summary</ThemedText>
+                            <ThemedText style={styles.sectionTitle}>News Content</ThemedText>
                             <ThemedText style={styles.charCount}>
-                                {newsSummary.length}/1000
+                                {newsContent.length}/5000
                             </ThemedText>
                         </View>
                         <TextInput
                             style={styles.summaryInput}
-                            placeholder="Enter a brief news summary..."
+                            placeholder="Enter your news content here..."
                             placeholderTextColor="#999"
-                            value={newsSummary}
-                            onChangeText={setNewsSummary}
+                            value={newsContent}
+                            onChangeText={setNewsContent}
                             multiline
-                            numberOfLines={6}
-                            maxLength={1000}
+                            numberOfLines={10}
+                            maxLength={5000}
                             textAlignVertical="top"
+                            editable={!loading}
                         />
-                        {/* <ThemedText style={styles.summaryHint}>
-                            Brief summary of the news (max 1000 characters)
-                        </ThemedText> */}
+                        <ThemedText style={styles.summaryHint}>
+                            Write your live news content. Minimum 10 characters required.
+                        </ThemedText>
                     </View>
-
-                    {/* Additional Options */}
-                    {/* <View style={styles.optionsSection}>
-                        <TouchableOpacity 
-                            style={[styles.optionButton, isLive && styles.optionButtonActive]}
-                            onPress={() => setIsLive(true)}
-                        >
-                            <View style={[styles.optionDot, isLive && styles.optionDotActive]} />
-                            <ThemedText style={[styles.optionText, isLive && styles.optionTextActive]}>
-                                Mark as Live
-                            </ThemedText>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity 
-                            style={[styles.optionButton, !isLive && styles.optionButtonActive]}
-                            onPress={() => setIsLive(false)}
-                        >
-                            <View style={[styles.optionDot, !isLive && styles.optionDotActive]} />
-                            <ThemedText style={[styles.optionText, !isLive && styles.optionTextActive]}>
-                                Schedule for later
-                            </ThemedText>
-                        </TouchableOpacity>
-                    </View> */}
                 </ScrollView>
             </SafeAreaView>
         </ThemedView>
@@ -199,32 +141,13 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         backgroundColor: '#4B59B3',
         borderRadius: 20,
+        minWidth: 80,
+        alignItems: 'center',
     },
     publishText: {
         fontSize: 14,
         fontFamily: 'CoFoRaffineBold',
         color: '#FFFFFF',
-    },
-    liveIndicator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#FF3B3010',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#FF3B3020',
-        gap: 8,
-    },
-    liveDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: '#FF3B30',
-    },
-    liveText: {
-        fontSize: 14,
-        fontFamily: 'CoFoRaffineBold',
-        color: '#FF3B30',
     },
     scrollContent: {
         paddingHorizontal: 16,
@@ -248,49 +171,6 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         letterSpacing: 1,
     },
-    uploadBox: {
-        backgroundColor: '#FFF5F5',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#FF3B3020',
-        borderStyle: 'dashed',
-        padding: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: 150,
-    },
-    uploadIconContainer: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: '#FF3B3010',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    uploadText: {
-        fontSize: 14,
-        fontFamily: 'CoFoRaffineMedium',
-        color: '#FF3B30',
-    },
-    uploadedImage: {
-        width: '100%',
-        height: 150,
-        borderRadius: 8,
-        resizeMode: 'cover',
-    },
-    contentInput: {
-        borderWidth: 1,
-        borderColor: '#FF3B3020',
-        borderRadius: 8,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        fontSize: 14,
-        fontFamily: 'tenez',
-        color: '#333',
-        backgroundColor: '#FFF5F5',
-        minHeight: 100,
-    },
     summaryInput: {
         borderWidth: 1,
         borderColor: '#E3E3E9',
@@ -301,60 +181,18 @@ const styles = StyleSheet.create({
         fontFamily: 'tenez',
         color: '#000',
         backgroundColor: '#fff',
-        minHeight: 150,
+        minHeight: 200,
         textAlignVertical: 'top',
     },
     charCount: {
         fontSize: 12,
         fontFamily: 'tenez',
-        color: '#000000',
+        color: '#999',
     },
     summaryHint: {
         fontSize: 12,
         fontFamily: 'tenez',
         color: '#999',
         marginTop: 8,
-    },
-    optionsSection: {
-        backgroundColor: '#FFF5F5',
-        borderRadius: 12,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: '#FF3B3020',
-        gap: 12,
-    },
-    optionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        backgroundColor: '#FFFFFF',
-        borderWidth: 1,
-        borderColor: '#FF3B3020',
-    },
-    optionButtonActive: {
-        backgroundColor: '#FF3B30',
-        borderColor: '#FF3B30',
-    },
-    optionDot: {
-        width: 20,
-        height: 20,
-        borderRadius: 10,
-        borderWidth: 2,
-        borderColor: '#FF3B30',
-        marginRight: 12,
-    },
-    optionDotActive: {
-        backgroundColor: '#FFFFFF',
-        borderColor: '#FFFFFF',
-    },
-    optionText: {
-        fontSize: 14,
-        fontFamily: 'CoFoRaffineMedium',
-        color: '#666',
-    },
-    optionTextActive: {
-        color: '#FFFFFF',
     },
 });

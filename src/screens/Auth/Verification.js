@@ -62,7 +62,15 @@ export default function Verification() {
         if (canResend && email) {
             try {
                 setLoading(true);
-                const result = await authService.resendOTP(email);
+                
+                let result;
+                // Check role and call appropriate resend API
+                if (role === 'writer') {
+                    result = await authService.resendOTPWriter(email);
+                } else {
+                    result = await authService.resendOTP(email);
+                }
+                
                 if (result.success) {
                     setTimer(59);
                     setCanResend(false);
@@ -95,12 +103,32 @@ export default function Verification() {
         setLoading(true);
 
         try {
-            const result = await authService.verifyOTP(email, otpCode);
+            let result;
+            
+            // Check role and call appropriate verification API
+            if (role === 'writer') {
+                console.log('Using writer verification API for:', email);
+                result = await authService.writerVerifyOTP(email, otpCode);
+            } else {
+                console.log('Using reader verification API for:', email);
+                result = await authService.verifyOTP(email, otpCode);
+            }
             
             if (result.success) {
                 // Save user role
                 if (role) {
                     await saveUserRole(role);
+                }
+                
+                // Save user data if returned
+                if (result.data?.data) {
+                    await AsyncStorage.setItem('userData', JSON.stringify(result.data.data));
+                }
+                
+                // Save token if returned
+                if (result.data?.token || result.data?.access_token) {
+                    const token = result.data.token || result.data.access_token;
+                    await AsyncStorage.setItem('authToken', token);
                 }
                 
                 // Clear temporary email

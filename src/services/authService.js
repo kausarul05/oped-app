@@ -20,6 +20,7 @@ const authService = {
             return { success: false, error: error.message || 'Login failed' };
         }
     },
+    
     // Reader Signup
     readerSignup: async (userData) => {
         try {
@@ -48,7 +49,7 @@ const authService = {
         }
     },
 
-    // Verify OTP
+    // Reader Verify OTP
     verifyOTP: async (email, otp) => {
         try {
             const response = await api.post('/api/v1/reader/auth/verify-otp', {
@@ -64,6 +65,45 @@ const authService = {
             return { success: true, data: response.data };
         } catch (error) {
             return { success: false, error: error.message || 'Verification failed' };
+        }
+    },
+
+    // Writer Verify OTP
+    writerVerifyOTP: async (email, otp) => {
+        try {
+            const response = await api.post('/api/v1/writer/auth/verify-otp', {
+                email: email,
+                otp: otp,
+            });
+
+            // Save token if returned
+            if (response.data.token) {
+                await AsyncStorage.setItem('authToken', response.data.token);
+            }
+
+            return { success: true, data: response.data };
+        } catch (error) {
+            return { success: false, error: error.message || 'Verification failed' };
+        }
+    },
+
+    // Reader Resend OTP
+    resendOTP: async (email) => {
+        try {
+            const response = await api.post('/api/v1/reader/auth/resend-otp', { email });
+            return { success: true, data: response.data };
+        } catch (error) {
+            return { success: false, error: error.message || 'Resend failed' };
+        }
+    },
+
+    // Writer Resend OTP
+    resendOTPWriter: async (email) => {
+        try {
+            const response = await api.post('/api/v1/writer/auth/resend-otp', { email });
+            return { success: true, data: response.data };
+        } catch (error) {
+            return { success: false, error: error.message || 'Resend failed' };
         }
     },
 
@@ -84,16 +124,6 @@ const authService = {
             return { success: true, data: response.data };
         } catch (error) {
             return { success: false, error: error.message || 'Social login failed' };
-        }
-    },
-
-    // Resend OTP
-    resendOTP: async (email) => {
-        try {
-            const response = await api.post('/api/v1/reader/auth/resend-otp', { email });
-            return { success: true, data: response.data };
-        } catch (error) {
-            return { success: false, error: error.message || 'Resend failed' };
         }
     },
 };

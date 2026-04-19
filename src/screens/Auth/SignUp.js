@@ -140,9 +140,9 @@ export default function SignUp() {
                 Alert.alert('Success', 'Account created! Please verify your email.');
                 // Navigate to verification screen
                 navigation.navigate('Verification', { 
-                    email: email.trim().toLowerCase(),
-                    role: selectedRole 
-                });
+    email: email.trim().toLowerCase(),
+    role: selectedRole  // 'reader' or 'writer'
+});
             } else {
                 Alert.alert('Signup Failed', result.error || 'Something went wrong');
             }
