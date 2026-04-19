@@ -2,27 +2,139 @@ import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useRole } from '@/src/context/RoleContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Image,
+    RefreshControl,
     ScrollView,
     StyleSheet,
     TouchableOpacity,
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import authService from '../../../services/authService';
 
 export default function Settings({ navigation }) {
     const { colors } = useTheme();
     const { clearUserRole } = useRole();
     const [profileImage, setProfileImage] = useState(null);
+    const [userData, setUserData] = useState({
+        name: '',
+        email: '',
+        profileImage: null,
+    });
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [uploading, setUploading] = useState(false);
 
-    // User data
-    const user = {
-        name: 'Eric Lach',
-        email: 'eric.lach@example.com',
+    // Fetch user profile data
+    const fetchUserProfile = async () => {
+        try {
+            // First try to get from AsyncStorage
+            const userDataString = await AsyncStorage.getItem('userData');
+            if (userDataString) {
+                const parsedData = JSON.parse(userDataString);
+                // Handle different response structures
+                const user = parsedData.data || parsedData;
+                setUserData({
+                    name: user.name || '',
+                    email: user.email || '',
+                    profileImage: user.profileImage || null,
+                });
+                if (user.profileImage) {
+                    setProfileImage(user.profileImage);
+                }
+            }
+            
+            // Then fetch fresh data from API
+            const result = await authService.getWriterProfile();
+            if (result.success && result.data) {
+                const profile = result.data;
+                setUserData({
+                    name: profile.name || '',
+                    email: profile.email || '',
+                    profileImage: profile.profileImage || null,
+                });
+                if (profile.profileImage) {
+                    setProfileImage(profile.profileImage);
+                }
+                // Update AsyncStorage
+                await AsyncStorage.setItem('userData', JSON.stringify(profile));
+            }
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchUserProfile();
+    }, []);
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchUserProfile();
+    };
+
+    const pickImage = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        
+        if (status !== 'granted') {
+            Alert.alert('Permission needed', 'Please grant camera roll permissions to add a photo.');
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.3, // Compress image to avoid network issues
+        });
+
+        if (!result.canceled) {
+            setUploading(true);
+            try {
+                // Upload image to server
+                const formData = new FormData();
+                const imageUri = result.assets[0].uri;
+                const filename = imageUri.split('/').pop();
+                const match = /\.(\w+)$/.exec(filename);
+                const type = match ? `image/${match[1]}` : 'image/jpeg';
+                
+                formData.append('profileImage', {
+                    uri: imageUri,
+                    type: type,
+                    name: filename || `profile_${Date.now()}.jpg`,
+                });
+                
+                const uploadResult = await authService.updateProfileImage(formData);
+                
+                if (uploadResult.success) {
+                    setProfileImage(result.assets[0].uri);
+                    // Update userData with new image
+                    setUserData(prev => ({
+                        ...prev,
+                        profileImage: result.assets[0].uri,
+                    }));
+                    Alert.alert('Success', 'Profile picture updated successfully!');
+                    // Refresh profile data
+                    await fetchUserProfile();
+                } else {
+                    Alert.alert('Error', uploadResult.error || 'Failed to update profile picture');
+                }
+            } catch (error) {
+                console.error('Error uploading image:', error);
+                Alert.alert('Error', 'Failed to upload image. Please try again.');
+            } finally {
+                setUploading(false);
+            }
+        }
     };
 
     const handleLogout = () => {
@@ -35,11 +147,9 @@ export default function Settings({ navigation }) {
                     text: 'Logout', 
                     onPress: async () => {
                         try {
-                            // Clear user role from AsyncStorage
                             await clearUserRole();
-                            
-                            // Navigate to Login screen
-                            // We need to reset the navigation stack to Auth
+                            await AsyncStorage.removeItem('authToken');
+                            await AsyncStorage.removeItem('userData');
                             navigation.reset({
                                 index: 0,
                                 routes: [{ name: 'login' }],
@@ -59,27 +169,13 @@ export default function Settings({ navigation }) {
         navigation.navigate(screen);
     };
 
-    const pickImage = async () => {
-        // Request permission
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        
-        if (status !== 'granted') {
-            Alert.alert('Permission needed', 'Please grant camera roll permissions to add a photo.');
-            return;
-        }
-
-        // Launch image picker
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 1,
-        });
-
-        if (!result.canceled) {
-            setProfileImage(result.assets[0].uri);
-        }
-    };
+    if (loading) {
+        return (
+            <ThemedView style={[styles.container, styles.centerContainer]}>
+                <ActivityIndicator size="large" color="#4B59B3" />
+            </ThemedView>
+        );
+    }
 
     return (
         <ThemedView style={styles.container}>
@@ -93,21 +189,35 @@ export default function Settings({ navigation }) {
                     <View style={{ width: 40 }} />
                 </View>
 
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                    {/* Profile Section - No Cover Photo */}
+                <ScrollView 
+                    showsVerticalScrollIndicator={false} 
+                    contentContainerStyle={styles.scrollContent}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                    }
+                >
+                    {/* Profile Section */}
                     <View style={styles.profileContainer}>
                         <View style={styles.profileImageContainer}>
                             <Image 
-                                source={profileImage ? { uri: profileImage } : { uri: 'https://t4.ftcdn.net/jpg/06/08/55/73/360_F_608557356_ELcD2pwQO9pduTRL30umabzgJoQn5fnd.jpg' }} 
+                                source={profileImage ? { uri: profileImage } : { uri: 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png' }} 
                                 style={styles.profileImage} 
                             />
-                            <TouchableOpacity style={styles.addPhotoButton} onPress={pickImage}>
-                                <Ionicons name="camera" size={20} color="#FFFFFF" />
+                            <TouchableOpacity 
+                                style={styles.addPhotoButton} 
+                                onPress={pickImage}
+                                disabled={uploading}
+                            >
+                                {uploading ? (
+                                    <ActivityIndicator size="small" color="#FFFFFF" />
+                                ) : (
+                                    <Ionicons name="camera" size={20} color="#FFFFFF" />
+                                )}
                             </TouchableOpacity>
                         </View>
                         <View style={styles.profileInfo}>
-                            <ThemedText style={styles.profileName}>{user.name}</ThemedText>
-                            <ThemedText style={styles.profileEmail}>{user.email}</ThemedText>
+                            <ThemedText style={styles.profileName}>{userData.name}</ThemedText>
+                            <ThemedText style={styles.profileEmail}>{userData.email}</ThemedText>
                         </View>
                     </View>
 
@@ -199,6 +309,10 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: '#FFFFFF',
+    },
+    centerContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     header: {
         flexDirection: 'row',

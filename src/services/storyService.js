@@ -38,6 +38,19 @@ const storyService = {
         }
     },
 
+    // Get single story by ID
+    getWriterStoryById: async (storyId) => {
+        try {
+            const token = await AsyncStorage.getItem('authToken');
+            const response = await api.get(`/api/v1/story/writer/detail/${storyId}`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
+            return { success: true, data: response.data };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    },
+
     // Create a new story (Writer)
     createStory: async (formData) => {
         try {
