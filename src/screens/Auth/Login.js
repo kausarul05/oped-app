@@ -15,7 +15,7 @@ import authService from '../../services/authService';
 
 export default function LoginScreen() {
     const { colors } = useTheme();
-    const { saveUserRole } = useRole(); // Get saveUserRole from context
+    const { saveUserRole } = useRole();
     const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
@@ -37,24 +37,30 @@ export default function LoginScreen() {
         setLoading(true);
 
         try {
-            const result = await authService.login(email.trim().toLowerCase(), password.trim());
+            // Try reader login first
+            let result = await authService.readerLogin(email.trim().toLowerCase(), password.trim());
+            let userRole = 'reader';
+            
+            // If reader login fails, try writer login
+            if (!result.success) {
+                result = await authService.writerLogin(email.trim().toLowerCase(), password.trim());
+                userRole = 'writer';
+            }
             
             if (result.success) {
-                // Save user role (assuming API returns role)
-                const userRole = result.data.role || 'reader'; // Default to reader if not specified
+                // Save user role
                 await saveUserRole(userRole);
-
-                console.log("result", result)
-                console.log("token", result.data.access_token)
                 
                 // Save auth token
-                if (result.data?.access_token) {
-                    await AsyncStorage.setItem('authToken', result?.data?.access_token);
+                const token = result.data?.access_token || result.data?.token;
+                if (token) {
+                    await AsyncStorage.setItem('authToken', token);
                 }
                 
                 // Save user data
-                if (result.data?.data) {
-                    await AsyncStorage.setItem('userData', JSON.stringify(result.data));
+                const userData = result.data?.data || result.data?.user || result.data;
+                if (userData) {
+                    await AsyncStorage.setItem('userData', JSON.stringify(userData));
                 }
                 
                 // Save remember me preference
@@ -66,10 +72,10 @@ export default function LoginScreen() {
                     await AsyncStorage.removeItem('savedEmail');
                 }
                 
-                Alert.alert('Success', 'Logged in successfully!');
+                Alert.alert('Success', `Logged in as ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}!`);
                 // Navigation will be handled automatically by RootNavigator
             } else {
-                Alert.alert('Login Failed', result.error || 'Invalid email or password');
+                Alert.alert('Login Failed', 'Invalid email or password');
             }
         } catch (error) {
             console.error('Login error:', error);
@@ -97,40 +103,6 @@ export default function LoginScreen() {
         };
         loadSavedEmail();
     }, []);
-
-    // Social Login Handler
-    const handleSocialLogin = async (provider, userData) => {
-        setLoading(true);
-        try {
-            const result = await authService.socialLogin({
-                name: userData.name,
-                email: userData.email,
-                photo: userData.photo,
-            });
-            
-            if (result.success) {
-                // Save user role
-                const userRole = result.data.role || 'reader';
-                await saveUserRole(userRole);
-                
-                // Store user data
-                await AsyncStorage.setItem('userData', JSON.stringify(userData));
-                if (result.data.token) {
-                    await AsyncStorage.setItem('authToken', result.data.token);
-                }
-                
-                Alert.alert('Success', `Logged in with ${provider}`);
-                // Navigation will be handled automatically by RootNavigator
-            } else {
-                Alert.alert('Login Failed', result.error || 'Social login failed');
-            }
-        } catch (error) {
-            console.error('Social login error:', error);
-            Alert.alert('Error', 'Social login failed. Please try again.');
-        } finally {
-            setLoading(false);
-        }
-    };
 
     return (
         <ThemedView style={styles.container}>
@@ -259,7 +231,6 @@ export default function LoginScreen() {
                             },
                         ]}
                         onPress={() => {
-                            // For now, show alert that Google login needs setup
                             Alert.alert('Info', 'Google login will be available soon');
                         }}
                     >
@@ -275,7 +246,6 @@ export default function LoginScreen() {
                             },
                         ]}
                         onPress={() => {
-                            // For now, show alert that Apple login needs setup
                             Alert.alert('Info', 'Apple login will be available soon');
                         }}
                     >

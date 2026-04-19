@@ -1,4 +1,3 @@
-// src/services/podcastService.js
 import api from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -37,6 +36,27 @@ const podcastService = {
         } catch (error) {
             console.error('Get podcast by ID error:', error);
             return { success: false, error: error.message };
+        }
+    },
+
+    // Create a new podcast (Writer)
+    createPodcast: async (formData) => {
+        try {
+            const token = await AsyncStorage.getItem('authToken');
+            const response = await api.post('/api/v1/podcast/writer/create', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    Authorization: token ? `Bearer ${token}` : ''
+                }
+            });
+            
+            if (response.data && response.data.success) {
+                return { success: true, data: response.data };
+            }
+            return { success: false, error: response.data?.message || 'Failed to create podcast' };
+        } catch (error) {
+            console.error('Create podcast error:', error);
+            return { success: false, error: error.response?.data?.message || error.message };
         }
     },
 
