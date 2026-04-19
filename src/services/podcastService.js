@@ -1,5 +1,5 @@
-import api from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from './api';
 
 const podcastService = {
     // Get all podcasts with pagination
@@ -10,7 +10,7 @@ const podcastService = {
                 params: { category, page, limit },
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
             });
-            
+
             if (response.data && response.data.success) {
                 return {
                     success: true,
@@ -49,7 +49,7 @@ const podcastService = {
                     Authorization: token ? `Bearer ${token}` : ''
                 }
             });
-            
+
             if (response.data && response.data.success) {
                 return { success: true, data: response.data };
             }
@@ -109,6 +109,29 @@ const podcastService = {
             return { success: true, data: response.data };
         } catch (error) {
             return { success: false, error: error.message };
+        }
+    },
+
+    // Get writer's podcasts
+    getWriterPodcasts: async (status = 'draft', category = 'politics', page = 1, limit = 10) => {
+        try {
+            const token = await AsyncStorage.getItem('authToken');
+            const response = await api.get('/api/v1/podcast/writer/my-podcasts', {
+                params: { status, category, page, limit },
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
+
+            if (response.data && response.data.success) {
+                return {
+                    success: true,
+                    data: response.data.data,
+                    pagination: response.data.pagination
+                };
+            }
+            return { success: false, data: [], error: 'No data found' };
+        } catch (error) {
+            console.error('Get writer podcasts error:', error);
+            return { success: false, data: [], error: error.message };
         }
     },
 };

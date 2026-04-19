@@ -4,18 +4,21 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
     StyleSheet,
+    Switch,
     TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
 import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import storyService from '../../../services/storyService';
 
 export default function AddStory({ navigation }) {
     const { colors } = useTheme();
@@ -24,6 +27,20 @@ export default function AddStory({ navigation }) {
     const [summary, setSummary] = useState('');
     const [selectedImage, setSelectedImage] = useState(null);
     const [storyContent, setStoryContent] = useState('');
+    const [category, setCategory] = useState('technology');
+    const [tags, setTags] = useState('');
+    const [isPremium, setIsPremium] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const categories = [
+        { label: 'Technology', value: 'technology' },
+        { label: 'Business', value: 'business' },
+        { label: 'Politics', value: 'politics' },
+        { label: 'Culture', value: 'culture' },
+        { label: 'Travel', value: 'travel' },
+        { label: 'Finance', value: 'finance' },
+        { label: 'Sports', value: 'sports' },
+    ];
 
     const pickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -36,12 +53,71 @@ export default function AddStory({ navigation }) {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
-            aspect: [1, 1],
-            quality: 1,
+            aspect: [16, 9],
+            quality: 0.8,
         });
 
         if (!result.canceled) {
-            setSelectedImage(result.assets[0].uri);
+            setSelectedImage(result.assets[0]);
+        }
+    };
+
+    const handlePublish = async () => {
+        // Validation
+        if (!title.trim()) {
+            Alert.alert('Error', 'Please enter a title');
+            return;
+        }
+        if (!summary.trim()) {
+            Alert.alert('Error', 'Please enter a summary');
+            return;
+        }
+        if (!storyContent.trim()) {
+            Alert.alert('Error', 'Please enter story content');
+            return;
+        }
+        if (!selectedImage) {
+            Alert.alert('Error', 'Please upload a cover image');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            // Create FormData
+            const formData = new FormData();
+            
+            // Append text fields
+            formData.append('title', title.trim());
+            formData.append('summary', summary.trim());
+            formData.append('content', storyContent.trim());
+            formData.append('category', category);
+            formData.append('isPremium', isPremium);
+            
+            // Append tags as JSON string
+            const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+            formData.append('tags', JSON.stringify(tagsArray));
+            
+            // Append cover image
+            formData.append('coverImage', {
+                uri: selectedImage.uri,
+                type: selectedImage.mimeType || 'image/jpeg',
+                name: selectedImage.fileName || 'cover.jpg',
+            });
+
+            const result = await storyService.createStory(formData);
+            
+            if (result.success) {
+                Alert.alert('Success', 'Story sent to editor successfully!');
+                navigation.goBack();
+            } else {
+                Alert.alert('Error', result.error || 'Failed to publish story');
+            }
+        } catch (error) {
+            console.error('Error publishing story:', error);
+            Alert.alert('Error', 'Failed to publish story. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -75,7 +151,6 @@ export default function AddStory({ navigation }) {
                     text: 'Insert',
                     onPress: (url) => {
                         if (url && richText.current) {
-                            // First prompt for link text
                             Alert.prompt(
                                 'Link Text',
                                 'Enter the text for the link',
@@ -102,7 +177,6 @@ export default function AddStory({ navigation }) {
         );
     };
 
-    // Custom heading buttons
     const handleHeading1 = () => {
         richText.current?.insertHTML('<h1>Heading 1</h1>');
     };
@@ -126,9 +200,14 @@ export default function AddStory({ navigation }) {
                     <ThemedText style={styles.headerTitle}>Add Story</ThemedText>
                     <TouchableOpacity
                         style={styles.publishButton}
-                        onPress={() => Alert.alert('Publish', 'Story published successfully!')}
+                        onPress={handlePublish}
+                        disabled={loading}
                     >
-                        <ThemedText style={styles.publishText}>Send To Editor</ThemedText>
+                        {loading ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                            <ThemedText style={styles.publishText}>Send To Editor</ThemedText>
+                        )}
                     </TouchableOpacity>
                 </View>
 
@@ -142,14 +221,14 @@ export default function AddStory({ navigation }) {
                     >
                         {/* Upload Image Section */}
                         <View style={styles.section}>
-                            <ThemedText style={styles.sectionTitle}>Upload Image</ThemedText>
+                            <ThemedText style={styles.sectionTitle}>Upload Image *</ThemedText>
 
                             <TouchableOpacity
                                 style={styles.uploadBox}
                                 onPress={pickImage}
                             >
                                 {selectedImage ? (
-                                    <Image source={{ uri: selectedImage }} style={styles.uploadedImage} />
+                                    <Image source={{ uri: selectedImage.uri }} style={styles.uploadedImage} />
                                 ) : (
                                     <>
                                         <View style={styles.uploadIconContainer}>
@@ -157,18 +236,16 @@ export default function AddStory({ navigation }) {
                                         </View>
                                         <ThemedText style={styles.uploadText}>Upload Image</ThemedText>
                                         <ThemedText style={styles.uploadHint}>
-                                            Image must be in JPG or PNG format and at least 300*300 pixels.
+                                            JPG or PNG format, minimum 300x300 pixels
                                         </ThemedText>
                                     </>
                                 )}
                             </TouchableOpacity>
-
-
                         </View>
 
                         {/* Title Section */}
                         <View style={styles.section}>
-                            <ThemedText style={styles.sectionTitle}>Title</ThemedText>
+                            <ThemedText style={styles.sectionTitle}>Title *</ThemedText>
                             <TextInput
                                 style={styles.titleInput}
                                 placeholder="Enter your story title"
@@ -181,7 +258,7 @@ export default function AddStory({ navigation }) {
                         {/* Summary Section */}
                         <View style={styles.section}>
                             <View style={styles.sectionHeader}>
-                                <ThemedText style={styles.sectionTitle}>Summary</ThemedText>
+                                <ThemedText style={styles.sectionTitle}>Summary *</ThemedText>
                                 <ThemedText style={styles.charCount}>
                                     {summary.length}/500
                                 </ThemedText>
@@ -198,9 +275,66 @@ export default function AddStory({ navigation }) {
                             />
                         </View>
 
+                        {/* Category Section */}
+                        <View style={styles.section}>
+                            <ThemedText style={styles.sectionTitle}>Category *</ThemedText>
+                            <View style={styles.categoryContainer}>
+                                {categories.map((cat) => (
+                                    <TouchableOpacity
+                                        key={cat.value}
+                                        style={[
+                                            styles.categoryChip,
+                                            category === cat.value && styles.categoryChipActive
+                                        ]}
+                                        onPress={() => setCategory(cat.value)}
+                                    >
+                                        <ThemedText
+                                            style={[
+                                                styles.categoryText,
+                                                category === cat.value && styles.categoryTextActive
+                                            ]}
+                                        >
+                                            {cat.label}
+                                        </ThemedText>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        {/* Tags Section */}
+                        <View style={styles.section}>
+                            <ThemedText style={styles.sectionTitle}>Tags</ThemedText>
+                            <TextInput
+                                style={styles.titleInput}
+                                placeholder="Enter tags separated by commas (e.g., media, digital, journalism)"
+                                placeholderTextColor="#999"
+                                value={tags}
+                                onChangeText={setTags}
+                            />
+                            <ThemedText style={styles.uploadHint}>
+                                Separate multiple tags with commas
+                            </ThemedText>
+                        </View>
+
+                        {/* Premium Section */}
+                        <View style={styles.section}>
+                            <View style={styles.premiumContainer}>
+                                <ThemedText style={styles.sectionTitle}>Premium Content</ThemedText>
+                                <Switch
+                                    value={isPremium}
+                                    onValueChange={setIsPremium}
+                                    trackColor={{ false: '#E0E0E0', true: '#4B59B3' }}
+                                    thumbColor={isPremium ? '#FFFFFF' : '#FFFFFF'}
+                                />
+                            </View>
+                            <ThemedText style={styles.uploadHint}>
+                                Enable if this story is for premium users only
+                            </ThemedText>
+                        </View>
+
                         {/* Rich Text Editor - Full Featured */}
                         <View style={styles.section}>
-                            <ThemedText style={styles.sectionTitle}>Tell your story</ThemedText>
+                            <ThemedText style={styles.sectionTitle}>Tell your story *</ThemedText>
 
                             {/* Rich Editor */}
                             <View style={styles.editorContainer}>
@@ -302,12 +436,15 @@ const styles = StyleSheet.create({
         fontWeight: '400',
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
+        letterSpacing: 1
     },
     publishButton: {
         paddingHorizontal: 16,
         paddingVertical: 8,
         backgroundColor: '#4B59B3',
         borderRadius: 20,
+        minWidth: 100,
+        alignItems: 'center',
     },
     publishText: {
         fontSize: 14,
@@ -333,14 +470,14 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
-        marginBottom: 4,
+        marginBottom: 8,
         letterSpacing: 1
     },
     uploadBox: {
-        backgroundColor: '#fff',
+        backgroundColor: '#F8F9FA',
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#E3E3E9',
+        borderColor: '#E0E0E0',
         borderStyle: 'dashed',
         padding: 20,
         alignItems: 'center',
@@ -351,15 +488,15 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        // backgroundColor: '#F0F3FF',
+        backgroundColor: '#F0F3FF',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 8,
     },
     uploadText: {
         fontSize: 14,
-        fontFamily: 'CoFoRaffineBold',
-        color: '#000',
+        fontFamily: 'CoFoRaffineMedium',
+        color: '#4B59B3',
     },
     uploadedImage: {
         width: '100%',
@@ -375,25 +512,25 @@ const styles = StyleSheet.create({
     },
     titleInput: {
         borderWidth: 1,
-        borderColor: '#E3E3E9',
+        borderColor: '#E0E0E0',
         borderRadius: 8,
         paddingHorizontal: 16,
-        paddingVertical: 14,
+        paddingVertical: 12,
         fontSize: 14,
         fontFamily: 'tenez',
         color: '#333',
-        backgroundColor: '#ffff',
+        backgroundColor: '#F8F9FA',
     },
     summaryInput: {
         borderWidth: 1,
-        borderColor: '#E3E3E9',
+        borderColor: '#E0E0E0',
         borderRadius: 8,
         paddingHorizontal: 16,
-        paddingVertical: 14,
+        paddingVertical: 12,
         fontSize: 14,
         fontFamily: 'tenez',
         color: '#333',
-        backgroundColor: '#fff',
+        backgroundColor: '#F8F9FA',
         minHeight: 80,
         textAlignVertical: 'top',
     },
@@ -402,9 +539,39 @@ const styles = StyleSheet.create({
         fontFamily: 'tenez',
         color: '#999',
     },
+    categoryContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+    },
+    categoryChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        backgroundColor: '#FFFFFF',
+    },
+    categoryChipActive: {
+        backgroundColor: '#4B59B3',
+        borderColor: '#4B59B3',
+    },
+    categoryText: {
+        fontSize: 14,
+        fontFamily: 'CoFoRaffineMedium',
+        color: '#666',
+    },
+    categoryTextActive: {
+        color: '#FFFFFF',
+    },
+    premiumContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
     editorContainer: {
         borderWidth: 1,
-        borderColor: '#E3E3E9',
+        borderColor: '#E0E0E0',
         borderRadius: 8,
         backgroundColor: '#FFFFFF',
         minHeight: 250,

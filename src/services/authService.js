@@ -29,7 +29,7 @@ const authService = {
             return { success: false, error: error.response?.data?.message || error.message || 'Login failed' };
         }
     },
-    
+
     // Reader Signup
     readerSignup: async (userData) => {
         try {
@@ -133,6 +133,19 @@ const authService = {
             return { success: true, data: response.data };
         } catch (error) {
             return { success: false, error: error.message || 'Social login failed' };
+        }
+    },
+
+    // Get Writer Profile
+    getWriterProfile: async () => {
+        try {
+            const token = await AsyncStorage.getItem('authToken');
+            const response = await api.get('/api/v1/writer/profile/get-profile', {
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
+            return { success: true, data: response.data?.data };
+        } catch (error) {
+            return { success: false, error: error.message };
         }
     },
 };
