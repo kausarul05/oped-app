@@ -2,8 +2,9 @@ import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     FlatList,
     Image,
     Modal,
@@ -13,258 +14,255 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import storyService from '../../../services/storyService';
 
 export default function SavedDrafts({ navigation }) {
     const { colors } = useTheme();
-    const [activeTab, setActiveTab] = useState('Publish Status');
+    const [activeTab, setActiveTab] = useState('Draft');
     const [menuVisible, setMenuVisible] = useState(null);
     const [selectedItem, setSelectedItem] = useState(null);
+    const [selectedFeedbackItem, setSelectedFeedbackItem] = useState(null);
+    const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
+    const [feedbackContent, setFeedbackContent] = useState('');
+    const [loadingFeedback, setLoadingFeedback] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [storiesData, setStoriesData] = useState({
+        draft: [],
+        pending: [],
+        published: [],
+        rejected: [],
+        revision: [],
+        scheduled: [],
+    });
     const scrollViewRef = useRef(null);
 
-    // All tabs
+    // All tabs with their respective status
     const tabs = [
-        'Publish Status',
-        'Scheduled',
-        'Request Revision',
-        'Draft (10)',
-        'Save (8)',
-        'Rejected'
+        { key: 'Draft', label: 'Draft', status: 'draft', apiEndpoint: 'my-stories' },
+        { key: 'Pending', label: 'Pending', status: 'pending', apiEndpoint: 'my-stories' },
+        { key: 'Published', label: 'Published', status: 'published', apiEndpoint: 'my-stories' },
+        { key: 'Rejected', label: 'Rejected', status: 'rejected', apiEndpoint: 'my-stories' },
+        { key: 'Revision', label: 'Revision', status: 'revision', apiEndpoint: 'my-stories' },
+        { key: 'Scheduled', label: 'Scheduled', status: 'scheduled', apiEndpoint: 'scheduled' },
     ];
 
     const gradientColors = ['#343E87', '#3448D6', '#343E87'];
 
-    // Different data for each tab
-    const getTabData = () => {
-        switch (activeTab) {
-            case 'Publish Status':
-                return publishStatusData;
-            case 'Scheduled':
-                return scheduledData;
-            case 'Request Revision':
-                return requestRevisionData;
-            case 'Draft (10)':
-                return draftData;
-            case 'Save (8)':
-                return saveData;
-            case 'Rejected':
-                return rejectedData;
-            default:
-                return publishStatusData;
+    // Fetch stories for a specific status
+    const fetchStoriesByStatus = async (status, apiEndpoint, page = 1, limit = 50) => {
+        try {
+            let result;
+            if (apiEndpoint === 'scheduled') {
+                // Use dedicated scheduled API
+                result = await storyService.getScheduledStories(page, limit);
+            } else {
+                // Use regular my-stories API
+                result = await storyService.getWriterStories(status, page, limit);
+            }
+            
+            if (result.success && result.data) {
+                const formattedStories = result.data.map(story => ({
+                    id: story._id,
+                    title: story.title,
+                    description: story.summary?.substring(0, 100) + '...',
+                    image: story.coverImage,
+                    date: formatDate(story.createdAt),
+                    scheduledDate: story.scheduledAt ? formatDate(story.scheduledAt) : null,
+                    status: story.status,
+                    type: story.type || 'story',
+                    isPremium: story.isPremium,
+                }));
+                return formattedStories;
+            }
+            return [];
+        } catch (error) {
+            console.error(`Error fetching ${status} stories:`, error);
+            return [];
         }
     };
 
-    // Publish Status Data
-    const publishStatusData = [
-        {
-            id: 'p1',
-            title: 'Why Subscription-Based Content Is Growing Fast.',
-            description: 'As technology evolves and reader habits shift, independ...',
-            date: '25 January, 10:00 AM',
-            image: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-        {
-            id: 'p2',
-            title: 'The Future of Digital Media',
-            description: 'Digital platforms are redefining how stories are told...',
-            date: '24 January, 2:30 PM',
-            image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-        {
-            id: 'p3',
-            title: 'AI-Powered Journalism',
-            description: 'How artificial intelligence is transforming newsrooms...',
-            date: '23 January, 11:15 AM',
-            image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-        {
-            id: 'p4',
-            title: 'The Rise of Podcasting',
-            description: 'Audio content is becoming the preferred medium for many...',
-            date: '22 January, 3:45 PM',
-            image: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-        {
-            id: 'p5',
-            title: 'Digital Advertising Trends 2026',
-            description: 'New strategies for monetizing content in a changing...',
-            date: '21 January, 9:20 AM',
-            image: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2074&q=80',
-        },
-        {
-            id: 'p6',
-            title: 'Climate Change Reporting',
-            description: 'How journalists are covering the biggest story of our...',
-            date: '20 January, 1:10 PM',
-            image: 'https://images.unsplash.com/photo-1562157873-818bc0726f68?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2027&q=80',
-        },
-        {
-            id: 'p7',
-            title: 'Social Media Impact on News',
-            description: 'How platforms are changing the way we consume news...',
-            date: '19 January, 4:30 PM',
-            image: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1974&q=80',
-        },
-        {
-            id: 'p8',
-            title: 'Local News Revival',
-            description: 'Community journalism is making a comeback...',
-            date: '18 January, 10:45 AM',
-            image: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-        {
-            id: 'p9',
-            title: 'Investigative Journalism in 2026',
-            description: 'New tools and techniques for deep reporting...',
-            date: '17 January, 2:15 PM',
-            image: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1973&q=80',
-        },
-        {
-            id: 'p10',
-            title: 'The Future of Newsletters',
-            description: 'Why email is becoming the most personal news platform...',
-            date: '16 January, 11:30 AM',
-            image: 'https://images.unsplash.com/photo-1596526131083-e8c633c948d2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1974&q=80',
-        },
-    ];
-    
-    // Scheduled Data
-    const scheduledData = [
-        {
-            id: 's1',
-            title: 'Understanding Reader Habits',
-            description: 'How readers consume content in the digital age...',
-            date: '26 January, 9:00 AM',
-            image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-        {
-            id: 's2',
-            title: 'The Rise of Independent Journalism',
-            description: 'Independent platforms are gaining trust worldwide...',
-            date: '27 January, 11:30 AM',
-            image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2015&q=80',
-        },
-    ];
+    // Fetch feedback for a story
+    const fetchFeedback = async (storyId) => {
+        setLoadingFeedback(true);
+        try {
+            const result = await storyService.getStoryFeedback(storyId);
+            if (result.success) {
+                if (result.data?.feedback) {
+                    setFeedbackContent(result.data.feedback);
+                } else {
+                    setFeedbackContent('No feedback available for this story.');
+                }
+            } else {
+                setFeedbackContent('Unable to load feedback. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error fetching feedback:', error);
+            setFeedbackContent('Error loading feedback.');
+        } finally {
+            setLoadingFeedback(false);
+            setFeedbackModalVisible(true);
+        }
+    };
 
-    // Request Revision Data (with View Feedback button)
-    const requestRevisionData = [
-        {
-            id: 'r1',
-            title: 'AI in Modern Journalism',
-            description: 'How artificial intelligence is changing newsrooms...',
-            image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            hasFeedback: true,
-        },
-        {
-            id: 'r2',
-            title: 'Climate Change Coverage',
-            description: 'New approaches to environmental journalism...',
-            image: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            hasFeedback: true,
-        },
-    ];
+    // Fetch all stories for all statuses
+    const fetchAllStories = async () => {
+        setLoading(true);
+        try {
+            const results = await Promise.all([
+                fetchStoriesByStatus('draft', 'my-stories'),
+                fetchStoriesByStatus('pending', 'my-stories'),
+                fetchStoriesByStatus('published', 'my-stories'),
+                fetchStoriesByStatus('rejected', 'my-stories'),
+                fetchStoriesByStatus('revision', 'my-stories'),
+                fetchStoriesByStatus('scheduled', 'scheduled'),
+            ]);
+            
+            setStoriesData({
+                draft: results[0],
+                pending: results[1],
+                published: results[2],
+                rejected: results[3],
+                revision: results[4],
+                scheduled: results[5],
+            });
+        } catch (error) {
+            console.error('Error fetching all stories:', error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
 
-    // Draft Data (no time, no feedback)
-    const draftData = [
-        {
-            id: 'd1',
-            title: 'Local News Evolution',
-            description: 'How local newspapers are adapting to digital...',
-            image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-        {
-            id: 'd2',
-            title: 'Podcasting Trends 2026',
-            description: 'What\'s next in the world of audio content...',
-            image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-    ];
+    useEffect(() => {
+        fetchAllStories();
+    }, []);
 
-    // Save Data (no time, no feedback)
-    const saveData = [
-        {
-            id: 'sv1',
-            title: 'Media Ethics Today',
-            description: 'Navigating ethical challenges in modern media...',
-            image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2015&q=80',
-        },
-        {
-            id: 'sv2',
-            title: 'Digital Subscription Models',
-            description: 'How to grow your subscriber base...',
-            image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-    ];
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchAllStories();
+    };
 
-    // Rejected Data (no time, no feedback)
-    const rejectedData = [
-        {
-            id: 'rj1',
-            title: 'Controversial Opinion Piece',
-            description: 'This article did not meet our guidelines...',
-            image: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-        {
-            id: 'rj2',
-            title: 'Unverified Sources',
-            description: 'Article rejected due to fact-checking issues...',
-            image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-    ];
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { 
+            day: 'numeric', 
+            month: 'long', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+    };
+
+    // Get data for current active tab
+    const getCurrentTabData = () => {
+        const tab = tabs.find(t => t.key === activeTab);
+        if (!tab) return [];
+        return storiesData[tab.status] || [];
+    };
 
     const handleThreeDotPress = (itemId) => {
         setSelectedItem(itemId);
         setMenuVisible(true);
     };
 
-    const handleMenuOption = (option) => {
+    const handleViewFeedback = (storyId) => {
         setMenuVisible(false);
-        console.log(`${option} clicked for item ${selectedItem}`);
-        // Add your logic here for each option
+        fetchFeedback(storyId);
     };
 
-    const getMenuOptions = () => {
-        // For Draft, Save, Rejected tabs - show all options
-        if (activeTab === 'Draft (10)' || activeTab === 'Save (8)' || activeTab === 'Rejected') {
-            return [
-                { icon: 'send-outline', label: 'Send to Editor', color: '#000' },
-                { icon: 'create-outline', label: 'Edit', color: '#000' },
-                { icon: 'document-text-outline', label: 'Draft', color: '#000' },
-                { icon: 'bookmark-outline', label: 'Save', color: '#000' },
-                { icon: 'trash-outline', label: 'Delete', color: '#FF3B30' },
-            ];
+    const handleMenuOption = (option) => {
+        setMenuVisible(false);
+        if (option === 'View Feedback') {
+            fetchFeedback(selectedItem);
         } else {
-            // For other tabs - keep original options
-            return [
-                { icon: 'create-outline', label: 'Edit', color: '#000' },
-                { icon: 'document-text-outline', label: 'Draft', color: '#000' },
-                { icon: 'bookmark-outline', label: 'Save', color: '#000' },
-                { icon: 'trash-outline', label: 'Delete', color: '#FF3B30' },
-            ];
+            console.log(`${option} clicked for item ${selectedItem}`);
         }
     };
 
+    const getMenuOptions = () => {
+        if (activeTab === 'Draft') {
+            return [
+                { icon: 'create-outline', label: 'Edit', color: '#000' },
+                { icon: 'send-outline', label: 'Submit for Review', color: '#000' },
+                { icon: 'trash-outline', label: 'Delete', color: '#FF3B30' },
+            ];
+        } else if (activeTab === 'Pending') {
+            return [
+                { icon: 'eye-outline', label: 'View Details', color: '#000' },
+                { icon: 'close-circle-outline', label: 'Cancel Request', color: '#FF3B30' },
+            ];
+        } else if (activeTab === 'Published') {
+            return [
+                { icon: 'eye-outline', label: 'View', color: '#000' },
+                { icon: 'share-social-outline', label: 'Share', color: '#000' },
+                { icon: 'trash-outline', label: 'Delete', color: '#FF3B30' },
+            ];
+        } else if (activeTab === 'Rejected') {
+            return [
+                { icon: 'eye-outline', label: 'View Details', color: '#000' },
+                { icon: 'chatbubble-outline', label: 'View Feedback', color: '#4B59B3' },
+                { icon: 'create-outline', label: 'Edit & Resubmit', color: '#000' },
+                { icon: 'trash-outline', label: 'Delete', color: '#FF3B30' },
+            ];
+        } else if (activeTab === 'Revision') {
+            return [
+                { icon: 'eye-outline', label: 'View Details', color: '#000' },
+                { icon: 'chatbubble-outline', label: 'View Feedback', color: '#4B59B3' },
+                { icon: 'create-outline', label: 'Make Changes', color: '#000' },
+                { icon: 'trash-outline', label: 'Delete', color: '#FF3B30' },
+            ];
+        } else if (activeTab === 'Scheduled') {
+            return [
+                { icon: 'create-outline', label: 'Edit', color: '#000' },
+                { icon: 'calendar-outline', label: 'Reschedule', color: '#000' },
+                { icon: 'close-circle-outline', label: 'Cancel Schedule', color: '#FF3B30' },
+            ];
+        }
+        return [
+            { icon: 'create-outline', label: 'Edit', color: '#000' },
+            { icon: 'trash-outline', label: 'Delete', color: '#FF3B30' },
+        ];
+    };
+
     const renderDraftItem = ({ item }) => {
-        // Check if current tab is Request Revision
-        const isRequestRevision = activeTab === 'Request Revision';
-        // Check if current tab should show time (Publish Status, Scheduled)
-        const showTime = activeTab === 'Publish Status' || activeTab === 'Scheduled';
+        const showTime = activeTab === 'Published' || activeTab === 'Scheduled';
+        const isRequestRevision = activeTab === 'Revision';
+        const isPending = activeTab === 'Pending';
+        const isRejected = activeTab === 'Rejected';
+        const displayDate = activeTab === 'Scheduled' && item.scheduledDate ? item.scheduledDate : item.date;
 
         return (
-            <TouchableOpacity style={styles.draftItem}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    {/* Show date/time only for Publish Status and Scheduled tabs */}
-                    {showTime && item.date && (
-                        <ThemedText style={styles.draftDate}>{item.date}</ThemedText>
+            <TouchableOpacity 
+                style={styles.draftItem}
+                onPress={() => {
+                    if (item.type === 'story') {
+                        navigation.navigate('WriterStoreDetail', { storyId: item.id });
+                    } else {
+                        navigation.navigate('PodcastDetail', { podcastId: item.id });
+                    }
+                }}
+            >
+                <View style={styles.draftHeader}>
+                    {showTime && displayDate && (
+                        <ThemedText style={styles.draftDate}>{displayDate}</ThemedText>
                     )}
-
-                    {/* Show View Feedback button only for Request Revision tab */}
-                    {isRequestRevision && (
-                        <TouchableOpacity style={styles.feedbackButton}>
+                    
+                    {(isRequestRevision || isRejected) && (
+                        <TouchableOpacity 
+                            style={styles.feedbackButton}
+                            onPress={() => fetchFeedback(item.id)}
+                        >
                             <ThemedText style={styles.feedbackButtonText}>View Feedback</ThemedText>
                         </TouchableOpacity>
                     )}
 
-                    {!showTime && !isRequestRevision && (
+                    {isPending && (
+                        <View style={styles.pendingBadge}>
+                            <ThemedText style={styles.pendingText}>Under Review</ThemedText>
+                        </View>
+                    )}
+
+                    {!showTime && !isRequestRevision && !isRejected && !isPending && (
                         <View />
                     )}
 
@@ -275,21 +273,35 @@ export default function SavedDrafts({ navigation }) {
                         <Ionicons name="ellipsis-horizontal" size={16} color="#999" />
                     </TouchableOpacity>
                 </View>
+                
                 <View style={styles.draftContent}>
-                    <View style={{ width: '70%' }}>
+                    <View style={styles.draftTextContent}>
                         <ThemedText style={styles.draftTitle}>{item.title}</ThemedText>
-                        <ThemedText style={styles.draftDescription}>{item.description}</ThemedText>
+                        <ThemedText style={styles.draftDescription} numberOfLines={2}>
+                            {item.description}
+                        </ThemedText>
+                        {item.isPremium && (
+                            <View style={styles.premiumBadge}>
+                                <ThemedText style={styles.premiumBadgeText}>PREMIUM</ThemedText>
+                            </View>
+                        )}
                     </View>
-                    <View style={{ width: '25%' }}>
-                        {/* Image on the right side */}
-                        <Image source={{ uri: item.image }} style={styles.draftImage} />
-                    </View>
+                    <Image source={{ uri: item.image }} style={styles.draftImage} />
                 </View>
             </TouchableOpacity>
         );
     };
 
+    const currentData = getCurrentTabData();
     const menuOptions = getMenuOptions();
+
+    if (loading && !refreshing) {
+        return (
+            <ThemedView style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#4B59B3" />
+            </ThemedView>
+        );
+    }
 
     return (
         <ThemedView style={styles.container}>
@@ -300,9 +312,6 @@ export default function SavedDrafts({ navigation }) {
                         <Ionicons name="arrow-back" size={24} color="#000" />
                     </TouchableOpacity>
                     <ThemedText style={styles.headerTitle}>Save & Draft</ThemedText>
-                    {/* <TouchableOpacity style={styles.searchButton}>
-                        <Ionicons name="search-outline" size={24} color="#000" />
-                    </TouchableOpacity> */}
                     <View />
                 </View>
 
@@ -314,32 +323,36 @@ export default function SavedDrafts({ navigation }) {
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.tabsScrollContent}
                     >
-                        {tabs.map((tab) => (
-                            <TouchableOpacity
-                                key={tab}
-                                onPress={() => setActiveTab(tab)}
-                                style={styles.tabContainer}
-                            >
-                                {activeTab === tab ? (
-                                    <LinearGradient
-                                        colors={gradientColors}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 1 }}
-                                        style={styles.activeTabGradient}
-                                    >
-                                        <ThemedText style={styles.activeTabText}>
-                                            {tab}
-                                        </ThemedText>
-                                    </LinearGradient>
-                                ) : (
-                                    <View style={[styles.inactiveTab, { borderColor: '#343E87' }]}>
-                                        <ThemedText style={styles.inactiveTabText}>
-                                            {tab}
-                                        </ThemedText>
-                                    </View>
-                                )}
-                            </TouchableOpacity>
-                        ))}
+                        {tabs.map((tab) => {
+                            const count = storiesData[tab.status]?.length || 0;
+                            const displayLabel = `${tab.label} (${count})`;
+                            return (
+                                <TouchableOpacity
+                                    key={tab.key}
+                                    onPress={() => setActiveTab(tab.key)}
+                                    style={styles.tabContainer}
+                                >
+                                    {activeTab === tab.key ? (
+                                        <LinearGradient
+                                            colors={gradientColors}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 1 }}
+                                            style={styles.activeTabGradient}
+                                        >
+                                            <ThemedText style={styles.activeTabText}>
+                                                {displayLabel}
+                                            </ThemedText>
+                                        </LinearGradient>
+                                    ) : (
+                                        <View style={[styles.inactiveTab, { borderColor: '#343E87' }]}>
+                                            <ThemedText style={styles.inactiveTabText}>
+                                                {displayLabel}
+                                            </ThemedText>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            );
+                        })}
                     </ScrollView>
                 </View>
 
@@ -347,14 +360,77 @@ export default function SavedDrafts({ navigation }) {
                 <View style={styles.divider} />
 
                 {/* Drafts List */}
-                <FlatList
-                    data={getTabData()}
-                    renderItem={renderDraftItem}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.listContent}
-                    showsVerticalScrollIndicator={false}
-                />
+                {currentData.length > 0 ? (
+                    <FlatList
+                        data={currentData}
+                        renderItem={renderDraftItem}
+                        keyExtractor={(item) => item.id}
+                        contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                    />
+                ) : (
+                    <View style={styles.emptyContainer}>
+                        <Ionicons name="document-text-outline" size={60} color="#ccc" />
+                        <ThemedText style={styles.emptyTitle}>No {activeTab} Stories</ThemedText>
+                        <ThemedText style={styles.emptySubText}>
+                            {activeTab === 'Draft' && 'Your draft stories will appear here'}
+                            {activeTab === 'Pending' && 'No stories pending review'}
+                            {activeTab === 'Published' && 'Your published stories will appear here'}
+                            {activeTab === 'Rejected' && 'Rejected stories will appear here'}
+                            {activeTab === 'Revision' && 'Stories needing revision will appear here'}
+                            {activeTab === 'Scheduled' && 'Scheduled stories will appear here'}
+                        </ThemedText>
+                        {/* {(activeTab === 'Draft' || activeTab === 'Published') && (
+                            <TouchableOpacity 
+                                style={styles.createButton}
+                                onPress={() => navigation.navigate('AddStory')}
+                            >
+                                <ThemedText style={styles.createButtonText}>Create New Story</ThemedText>
+                            </TouchableOpacity>
+                        )} */}
+                    </View>
+                )}
             </SafeAreaView>
+
+            {/* Feedback Modal */}
+            <Modal
+                visible={feedbackModalVisible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setFeedbackModalVisible(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setFeedbackModalVisible(false)}
+                >
+                    <View style={styles.feedbackModalContainer}>
+                        <View style={styles.feedbackModalHeader}>
+                            <ThemedText style={styles.feedbackModalTitle}>Feedback</ThemedText>
+                            <TouchableOpacity onPress={() => setFeedbackModalVisible(false)}>
+                                <Ionicons name="close" size={24} color="#000" />
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView style={styles.feedbackModalContent}>
+                            {loadingFeedback ? (
+                                <ActivityIndicator size="large" color="#4B59B3" />
+                            ) : (
+                                <ThemedText style={styles.feedbackModalText}>
+                                    {feedbackContent}
+                                </ThemedText>
+                            )}
+                        </ScrollView>
+                        <TouchableOpacity 
+                            style={styles.feedbackModalButton}
+                            onPress={() => setFeedbackModalVisible(false)}
+                        >
+                            <ThemedText style={styles.feedbackModalButtonText}>Close</ThemedText>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
 
             {/* Three Dot Menu Modal */}
             <Modal
@@ -399,6 +475,12 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#FFFFFF',
     },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+    },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -420,16 +502,8 @@ const styles = StyleSheet.create({
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
     },
-    searchButton: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
     tabsWrapper: {
         paddingVertical: 12,
-        // borderBottomWidth: 1,
-        // borderBottomColor: '#F0F0F0',
     },
     tabsScrollContent: {
         paddingHorizontal: 16,
@@ -451,7 +525,7 @@ const styles = StyleSheet.create({
         borderColor: '#343E87',
     },
     activeTabText: {
-        fontSize: 16,
+        fontSize: 14,
         fontFamily: 'CoFoRaffineBold',
         color: '#FFFFFF',
         letterSpacing: 1
@@ -465,7 +539,7 @@ const styles = StyleSheet.create({
         borderColor: '#343E87',
     },
     inactiveTabText: {
-        fontSize: 16,
+        fontSize: 14,
         fontFamily: 'CoFoRaffineMedium',
         color: '#666',
         letterSpacing: 1
@@ -481,9 +555,6 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
     },
     draftItem: {
-        // flexDirection: 'row',
-        // alignItems: 'center',
-        // paddingVertical: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#F0F0F0',
         gap: 12,
@@ -493,11 +564,18 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         padding: 8
     },
+    draftHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
     draftContent: {
-        // flex: 1,
         flexDirection: "row",
         justifyContent: 'space-between',
         gap: 12
+    },
+    draftTextContent: {
+        width: '70%',
     },
     draftDate: {
         fontSize: 14,
@@ -540,12 +618,64 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         borderRadius: 16,
         alignSelf: 'flex-start',
-        // marginTop: 4,
     },
     feedbackButtonText: {
         fontSize: 12,
         fontFamily: 'CoFoRaffineBold',
-        color: '#000',
+        color: '#4B59B3',
+    },
+    pendingBadge: {
+        backgroundColor: '#FF9500',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 16,
+    },
+    pendingText: {
+        fontSize: 12,
+        fontFamily: 'CoFoRaffineBold',
+        color: '#FFFFFF',
+    },
+    premiumBadge: {
+        backgroundColor: '#FF9500',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 12,
+        alignSelf: 'flex-start',
+    },
+    premiumBadgeText: {
+        fontSize: 10,
+        fontFamily: 'CoFoRaffineBold',
+        color: '#FFFFFF',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 60,
+    },
+    emptyTitle: {
+        fontSize: 18,
+        fontFamily: 'CoFoRaffineBold',
+        color: '#666',
+        marginTop: 16,
+    },
+    emptySubText: {
+        fontSize: 14,
+        fontFamily: 'tenez',
+        color: '#999',
+        marginTop: 8,
+        textAlign: 'center',
+    },
+    createButton: {
+        marginTop: 20,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        backgroundColor: '#4B59B3',
+        borderRadius: 25,
+    },
+    createButtonText: {
+        fontSize: 14,
+        fontFamily: 'CoFoRaffineBold',
+        color: '#FFFFFF',
     },
     modalOverlay: {
         flex: 1,
@@ -578,5 +708,47 @@ const styles = StyleSheet.create({
     },
     deleteText: {
         color: '#FF3B30',
+    },
+    feedbackModalContainer: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        width: '85%',
+        maxHeight: '70%',
+    },
+    feedbackModalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    feedbackModalTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        fontFamily: 'CoFoRaffineBold',
+        color: '#000',
+    },
+    feedbackModalContent: {
+        padding: 16,
+        maxHeight: 300,
+    },
+    feedbackModalText: {
+        fontSize: 14,
+        fontFamily: 'tenez',
+        color: '#444',
+        lineHeight: 20,
+    },
+    feedbackModalButton: {
+        backgroundColor: '#4B59B3',
+        margin: 16,
+        paddingVertical: 10,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    feedbackModalButtonText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontFamily: 'CoFoRaffineBold',
     },
 });

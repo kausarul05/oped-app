@@ -136,11 +136,18 @@ const storyService = {
     },
 
     // Get writer's stories
-    getWriterStories: async (status = 'published', page = 1, limit = 10) => {
+    getWriterStories: async (status = '', page = 1, limit = 10) => {
         try {
             const token = await AsyncStorage.getItem('authToken');
+            const params = { page, limit };
+
+            // Only add status param if it's provided and not empty
+            if (status && status !== '') {
+                params.status = status;
+            }
+
             const response = await api.get('/api/v1/story/writer/my-stories', {
-                params: { status, page, limit },
+                params: params,
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
             });
 
@@ -155,6 +162,44 @@ const storyService = {
         } catch (error) {
             console.error('Get writer stories error:', error);
             return { success: false, data: [], error: error.message };
+        }
+    },
+
+    // Get scheduled stories (dedicated endpoint)
+    getScheduledStories: async (page = 1, limit = 10) => {
+        try {
+            const token = await AsyncStorage.getItem('authToken');
+            const response = await api.get('/api/v1/story/writer/scheduled', {
+                params: { page, limit },
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
+
+            if (response.data && response.data.success) {
+                return {
+                    success: true,
+                    data: response.data.data,
+                    pagination: response.data.pagination
+                };
+            }
+            return { success: false, data: [], error: 'No data found' };
+        } catch (error) {
+            console.error('Get scheduled stories error:', error);
+            return { success: false, data: [], error: error.message };
+        }
+    },
+
+    // Get feedback for a specific story
+    getStoryFeedback: async (storyId) => {
+        try {
+            const token = await AsyncStorage.getItem('authToken');
+            const response = await api.get(`/api/v1/story/writer/feedback/${storyId}`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
+
+            return { success: true, data: response.data?.data };
+        } catch (error) {
+            console.error('Get story feedback error:', error);
+            return { success: false, error: error.message };
         }
     },
 };
