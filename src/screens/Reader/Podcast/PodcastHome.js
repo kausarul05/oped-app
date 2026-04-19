@@ -5,6 +5,7 @@ import { Audio } from 'expo-av';
 import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Dimensions,
     FlatList,
@@ -14,6 +15,7 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import podcastService from '../../../services/podcastService';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 32; // Full width minus padding
@@ -23,93 +25,71 @@ export default function PodcastHome({ navigation }) {
     const [activeIndex, setActiveIndex] = useState(0);
     const [playingId, setPlayingId] = useState(null);
     const [sound, setSound] = useState(null);
+    const [expertOpinions, setExpertOpinions] = useState([]);
+    const [topEpisodes, setTopEpisodes] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const flatListRef = useRef(null);
 
-    // Expert opinions podcasts (horizontal scroll) - Full width cards
-    const expertOpinions = [
-        {
-            id: '1',
-            title: 'Hrant Dink anıldı, Avrupa\'nın planı | 20 Ocak 2026',
-            category: 'Expert opinions',
-            image: 'https://images.unsplash.com/photo-1589903308904-1010c2294adc?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-            audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-        },
-        {
-            id: '2',
-            title: 'İrandan uyan, İhlakçıcı tahlihci | 12 Ocak 2026',
-            category: 'Expert opinions',
-            image: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-            audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-        },
-        {
-            id: '3',
-            title: 'Küresel ekonomide yeni dengeler | 15 Ocak 2026',
-            category: 'Expert opinions',
-            image: 'https://images.unsplash.com/photo-1590602847861-f3579e41b79e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-            audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
-        },
-        {
-            id: '4',
-            title: 'Teknoloji ve insanlık ilişkisi | 18 Ocak 2026',
-            category: 'Expert opinions',
-            image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-            audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
-        },
-    ];
+    // Fetch podcasts from API
+    const fetchPodcasts = async () => {
+        try {
+            const result = await podcastService.getPodcasts('politics', 1, 10);
 
-    // Top episodes this week
-    const topEpisodes = [
-        {
-            id: '1',
-            title: 'İrandan uyan, İhlakçıcı tahlihci',
-            date: '12 Ocak 2026',
-            duration: '6 min',
-            fullDate: '19 January 2026',
-            category: 'Expert opinions',
-            image: 'https://images.unsplash.com/photo-1589903308904-1010c2294adc?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-            audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-        },
-        {
-            id: '2',
-            title: 'Hrant Dink anıldı, Avrupa\'nın planı',
-            date: '20 Ocak 2026',
-            duration: '8 min',
-            fullDate: '20 January 2026',
-            category: 'Expert opinions',
-            image: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-            audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-        },
-        {
-            id: '3',
-            title: 'Küresel ekonomide yeni dengeler',
-            date: '15 Ocak 2026',
-            duration: '7 min',
-            fullDate: '15 January 2026',
-            category: 'Expert opinions',
-            image: 'https://images.unsplash.com/photo-1590602847861-f3579e41b79e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-            audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
-        },
-        {
-            id: '4',
-            title: 'Teknoloji ve insanlık ilişkisi',
-            date: '18 Ocak 2026',
-            duration: '5 min',
-            fullDate: '18 January 2026',
-            category: 'Expert opinions',
-            image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-            audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
-        },
-        {
-            id: '5',
-            title: 'Avrupa Birliği ve Türkiye',
-            date: '10 Ocak 2026',
-            duration: '9 min',
-            fullDate: '10 January 2026',
-            category: 'Expert opinions',
-            image: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80',
-            audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
-        },
-    ];
+            if (result.success && result.data) {
+                // Format data for Expert Opinions section (horizontal scroll)
+                const formattedExpert = result.data.map(podcast => ({
+                    id: podcast._id,
+                    title: podcast.title,
+                    category: 'Expert opinions',
+                    image: podcast.coverImage,
+                    audioUrl: podcast.audioUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+                    duration: `${podcast.audioDuration} min`,
+                    date: formatDate(podcast.createdAt),
+                    isPremium: podcast.isPremium,
+                    author: podcast.author?.name,
+                }));
+                setExpertOpinions(formattedExpert);
+
+                // Format data for Top Episodes section
+                const formattedTopEpisodes = result.data.map(podcast => ({
+                    id: podcast._id,
+                    title: podcast.title,
+                    date: formatDate(podcast.createdAt),
+                    duration: `${podcast.audioDuration} min`,
+                    fullDate: new Date(podcast.createdAt).toLocaleDateString('en-US', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                    }),
+                    category: podcast.category,
+                    image: podcast.coverImage,
+                    audioUrl: podcast.audioUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+                    isPremium: podcast.isPremium,
+                }));
+                setTopEpisodes(formattedTopEpisodes);
+            }
+        } catch (error) {
+            console.error('Error fetching podcasts:', error);
+            Alert.alert('Error', 'Failed to load podcasts');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('tr-TR', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+    };
+
+    useEffect(() => {
+        fetchPodcasts();
+    }, []);
 
     // Clean up sound on unmount
     useEffect(() => {
@@ -137,7 +117,6 @@ export default function PodcastHome({ navigation }) {
     // Audio playback functions
     const playAudio = async (item) => {
         try {
-            // Stop any currently playing audio
             if (sound) {
                 await sound.stopAsync();
                 await sound.unloadAsync();
@@ -145,23 +124,20 @@ export default function PodcastHome({ navigation }) {
                 setPlayingId(null);
             }
 
-            // Request audio permissions
             const { granted } = await Audio.requestPermissionsAsync();
             if (!granted) {
                 Alert.alert('Permission Required', 'Please grant audio permissions to play podcasts.');
                 return;
             }
 
-            // Configure audio mode
             await Audio.setAudioModeAsync({
                 allowsRecordingIOS: false,
-                staysActiveInBackground: false, // Don't play in background
+                staysActiveInBackground: false,
                 playsInSilentModeIOS: true,
                 shouldDuckAndroid: true,
                 playThroughEarpieceAndroid: false,
             });
 
-            // Load and play audio
             const { sound: newSound } = await Audio.Sound.createAsync(
                 { uri: item.audioUrl },
                 { shouldPlay: true },
@@ -172,7 +148,7 @@ export default function PodcastHome({ navigation }) {
                     }
                 }
             );
-            
+
             setSound(newSound);
             setPlayingId(item.id);
 
@@ -202,57 +178,61 @@ export default function PodcastHome({ navigation }) {
     }).current;
 
     const handleExpertCardPress = (item) => {
-        // Stop any playing audio before navigating
         if (sound) {
             stopAudio();
         }
-        navigation.navigate('PodcastDetail', { podcast: item });
+        console.log("item", item.id)
+        navigation.navigate('PodcastDetail', { podcastId: item.id });
     };
 
     const handleExpertListenPress = async (item, event) => {
-        event.stopPropagation(); // Prevent card press
-        
-        // If same audio is playing, stop it
+        event.stopPropagation();
+
         if (playingId === item.id) {
             await stopAudio();
         } else {
-            // Play new audio (automatically stops previous)
             await playAudio(item);
         }
     };
 
     const renderExpertOpinionItem = ({ item }) => {
         const isPlaying = playingId === item.id;
-        
+
         return (
-            <TouchableOpacity 
+            <TouchableOpacity
                 style={[styles.expertCard, { width: CARD_WIDTH }]}
                 onPress={() => handleExpertCardPress(item)}
                 activeOpacity={0.7}
             >
                 <View style={styles.imageContainer}>
                     <Image source={{ uri: item.image }} style={styles.expertImage} />
-                    
-                    {/* Blur View and Text Overlay */}
+
+                    {/* Premium Badge */}
+                    {item.isPremium && (
+                        <View style={styles.premiumBadge}>
+                            <ThemedText style={styles.premiumText}>PREMIUM</ThemedText>
+                        </View>
+                    )}
+
                     <BlurView intensity={70} tint="dark" style={styles.blurOverlay}>
                         <View style={styles.overlayContent}>
-                            <ThemedText style={styles.overlayTitle}>Expert opinions</ThemedText>
+                            <ThemedText style={styles.overlayTitle}>{item.category}</ThemedText>
                         </View>
                     </BlurView>
                 </View>
-                
+
                 <View style={styles.expertContent}>
                     <View style={styles.expertTextContent}>
                         <ThemedText style={styles.expertTitle}>{item.title}</ThemedText>
                     </View>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.expertListenContainer}
                         onPress={(event) => handleExpertListenPress(item, event)}
                     >
-                        <Ionicons 
-                            name={isPlaying ? "pause-circle" : "play-circle"} 
-                            size={26} 
-                            color="#fff" 
+                        <Ionicons
+                            name={isPlaying ? "pause-circle" : "play-circle"}
+                            size={26}
+                            color="#fff"
                         />
                         <ThemedText style={styles.expertListenText}>
                             {isPlaying ? 'Pause' : 'Listen'}
@@ -264,35 +244,38 @@ export default function PodcastHome({ navigation }) {
     };
 
     const handleTopEpisodeCardPress = (episode) => {
-        // Stop any playing audio before navigating
         if (sound) {
             stopAudio();
         }
-        navigation.navigate('PodcastDetail', { podcast: episode });
+        console.log("episode", episode.id)
+        navigation.navigate('PodcastDetail', { podcastId: episode.id });
     };
 
     const handleTopEpisodeListenPress = async (episode, event) => {
-        event.stopPropagation(); // Prevent card press
-        
-        // If same audio is playing, stop it
+        event.stopPropagation();
+
         if (playingId === episode.id) {
             await stopAudio();
         } else {
-            // Play new audio (automatically stops previous)
             await playAudio(episode);
         }
     };
 
     const renderTopEpisodeItem = ({ item }) => {
         const isPlaying = playingId === item.id;
-        
+
         return (
-            <TouchableOpacity 
+            <TouchableOpacity
                 style={styles.episodeCard}
                 onPress={() => handleTopEpisodeCardPress(item)}
                 activeOpacity={0.7}
             >
                 <Image source={{ uri: item.image }} style={styles.episodeImage} />
+                {item.isPremium && (
+                    <View style={styles.episodePremiumBadge}>
+                        <ThemedText style={styles.episodePremiumText}>PREMIUM</ThemedText>
+                    </View>
+                )}
                 <View style={styles.episodeContent}>
                     <View style={styles.episodeHeader}>
                         <ThemedText style={styles.episodeCategory}>{item.category}</ThemedText>
@@ -303,13 +286,13 @@ export default function PodcastHome({ navigation }) {
                             <Ionicons name="time-outline" size={14} color="#999" />
                             <ThemedText style={styles.episodeDuration}>{item.duration} • {item.fullDate}</ThemedText>
                         </View>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={(event) => handleTopEpisodeListenPress(item, event)}
                         >
-                            <Ionicons 
-                                name={isPlaying ? "pause-circle" : "play-circle"} 
-                                size={36} 
-                                color={isPlaying ? "#FF3B30" : "#4B59B3"} 
+                            <Ionicons
+                                name={isPlaying ? "pause-circle" : "play-circle"}
+                                size={36}
+                                color={isPlaying ? "#FF3B30" : "#4B59B3"}
                             />
                         </TouchableOpacity>
                     </View>
@@ -318,7 +301,6 @@ export default function PodcastHome({ navigation }) {
         );
     };
 
-    // Combine all sections into one FlatList
     const sections = [
         { type: 'expert', data: expertOpinions },
         { type: 'topEpisodes', data: topEpisodes },
@@ -341,8 +323,7 @@ export default function PodcastHome({ navigation }) {
                         onViewableItemsChanged={onViewableItemsChanged}
                         viewabilityConfig={viewabilityConfig}
                     />
-                    
-                    {/* Pagination Dots */}
+
                     <View style={styles.paginationContainer}>
                         {expertOpinions.map((_, index) => (
                             <View
@@ -361,19 +342,24 @@ export default function PodcastHome({ navigation }) {
             );
         } else {
             return (
-                <View style={[styles.section, {marginTop: 38}]}>
+                <View style={[styles.section, { marginTop: 38 }]}>
                     <View style={styles.sectionHeader}>
                         <ThemedText style={styles.sectionTitle}>This Week's Top Episodes</ThemedText>
                     </View>
                     <View style={styles.episodesContainer}>
                         {item.data.map((episode) => (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 key={episode.id}
                                 style={styles.episodeCard}
                                 onPress={() => handleTopEpisodeCardPress(episode)}
                                 activeOpacity={0.7}
                             >
                                 <Image source={{ uri: episode.image }} style={styles.episodeImage} />
+                                {episode.isPremium && (
+                                    <View style={styles.episodePremiumBadge}>
+                                        <ThemedText style={styles.episodePremiumText}>PREMIUM</ThemedText>
+                                    </View>
+                                )}
                                 <View style={styles.episodeContent}>
                                     <View style={styles.episodeHeader}>
                                         <ThemedText style={styles.episodeCategory}>{episode.category}</ThemedText>
@@ -384,13 +370,13 @@ export default function PodcastHome({ navigation }) {
                                             <Ionicons name="time-outline" size={14} color="#999" />
                                             <ThemedText style={styles.episodeDuration}>{episode.duration} • {episode.fullDate}</ThemedText>
                                         </View>
-                                        <TouchableOpacity 
+                                        <TouchableOpacity
                                             onPress={(event) => handleTopEpisodeListenPress(episode, event)}
                                         >
-                                            <Ionicons 
-                                                name={playingId === episode.id ? "pause-circle" : "play-circle"} 
-                                                size={36} 
-                                                color={playingId === episode.id ? "#FF3B30" : "#4B59B3"} 
+                                            <Ionicons
+                                                name={playingId === episode.id ? "pause-circle" : "play-circle"}
+                                                size={36}
+                                                color={playingId === episode.id ? "#FF3B30" : "#4B59B3"}
                                             />
                                         </TouchableOpacity>
                                     </View>
@@ -403,10 +389,17 @@ export default function PodcastHome({ navigation }) {
         }
     };
 
+    if (loading && expertOpinions.length === 0) {
+        return (
+            <ThemedView style={[styles.container, styles.centerContainer]}>
+                <ActivityIndicator size="large" color="#4B59B3" />
+            </ThemedView>
+        );
+    }
+
     return (
         <ThemedView style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
-                {/* Header */}
                 <View style={styles.header}>
                     <View>
                         <ThemedText style={styles.headerTitle}>Podcasts</ThemedText>
@@ -417,13 +410,14 @@ export default function PodcastHome({ navigation }) {
                     </TouchableOpacity>
                 </View>
 
-                {/* Main FlatList */}
                 <FlatList
                     data={sections}
                     renderItem={renderSection}
                     keyExtractor={(item) => item.type}
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.contentContainer}
+                    refreshing={refreshing}
+                    onRefresh={fetchPodcasts}
                 />
             </SafeAreaView>
         </ThemedView>
@@ -438,6 +432,10 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: '#FFFFFF',
+    },
+    centerContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     header: {
         flexDirection: 'row',
@@ -485,11 +483,6 @@ const styles = StyleSheet.create({
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
     },
-    seeAllText: {
-        fontSize: 14,
-        fontFamily: 'tenez',
-        color: '#4B59B3',
-    },
     expertList: {
         paddingHorizontal: 16,
         gap: 16,
@@ -509,6 +502,22 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
         resizeMode: 'cover',
+    },
+    premiumBadge: {
+        position: 'absolute',
+        top: 12,
+        left: 12,
+        backgroundColor: '#FF9500',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 16,
+        zIndex: 10,
+    },
+    premiumText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: '600',
+        fontFamily: 'CoFoRaffineMedium',
     },
     blurOverlay: {
         position: 'absolute',
@@ -530,11 +539,6 @@ const styles = StyleSheet.create({
         fontFamily: 'CoFoRaffineBold',
         color: '#FFFFFF',
     },
-    overlayDate: {
-        fontSize: 14,
-        fontFamily: 'tenez',
-        color: '#FFFFFF',
-    },
     expertContent: {
         padding: 16,
         alignItems: 'center',
@@ -542,18 +546,12 @@ const styles = StyleSheet.create({
     expertTextContent: {
         marginRight: 12,
     },
-    expertCategory: {
-        fontSize: 12,
-        fontFamily: 'tenez',
-        color: '#4B59B3',
-        marginBottom: 4,
-    },
     expertTitle: {
-        fontSize: 24,
+        fontSize: 20,
         fontWeight: '600',
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
-        lineHeight: 36,
+        lineHeight: 28,
         textAlign: 'center',
     },
     expertListenContainer: {
@@ -598,6 +596,23 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 4,
+        position: 'relative',
+    },
+    episodePremiumBadge: {
+        position: 'absolute',
+        top: 8,
+        left: 8,
+        backgroundColor: '#FF9500',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 12,
+        zIndex: 10,
+    },
+    episodePremiumText: {
+        color: '#FFFFFF',
+        fontSize: 8,
+        fontWeight: '600',
+        fontFamily: 'CoFoRaffineMedium',
     },
     episodeImage: {
         width: 100,

@@ -58,7 +58,7 @@ export default function PostsList() {
                 
                 if (userDataString) {
                     const userData = JSON.parse(userDataString);
-                    console.log('Parsed userData:', userData);
+                    // console.log('Parsed userData:', userData);
                     
                     // Extract user ID from the nested structure
                     // The structure is: { success: true, message: "...", data: { id: "...", ... } }
@@ -72,7 +72,7 @@ export default function PostsList() {
                         userId = userData._id;
                     }
                     
-                    console.log('Extracted User ID:', userId);
+                    // console.log('Extracted User ID:', userId);
                     setCurrentUserId(userId);
                 }
             } catch (error) {
