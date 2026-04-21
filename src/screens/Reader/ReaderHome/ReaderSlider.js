@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import Carousel from 'react-native-snap-carousel-new';
 import commentService from '../../../services/commentService';
+import libraryService from '../../../services/libraryService';
 import reactionService from '../../../services/reactionService';
 import storyService from '../../../services/storyService';
 
@@ -93,6 +94,7 @@ export default function ReaderSlider() {
                     let likeStatus = false;
                     let totalLikes = story.likes || 0;
                     let totalComments = 0;
+                    let savedStatus = false;
 
                     try {
                         const reactionResult = await reactionService.getReactions(story._id);
@@ -113,6 +115,16 @@ export default function ReaderSlider() {
                         console.error('Error fetching comment count:', error);
                     }
 
+                    // Fetch saved status
+                    try {
+                        const savedResult = await libraryService.checkSavedStatus('story', story._id);
+                        if (savedResult.success) {
+                            savedStatus = savedResult.data?.isSaved || false;
+                        }
+                    } catch (error) {
+                        console.error('Error fetching saved status:', error);
+                    }
+
                     return {
                         id: story._id,
                         title: story.author?.name || 'Unknown Author',
@@ -127,18 +139,22 @@ export default function ReaderSlider() {
                         authorId: story.author?._id,
                         createdAt: story.createdAt,
                         isLiked: likeStatus,
+                        isSaved: savedStatus,
                     };
                 }));
                 
-                // Initialize liked state from API
+                // Initialize liked and saved state from API
                 const likedState = {};
                 const likeState = {};
+                const savedState = {};
                 newArticles.forEach(article => {
                     likedState[article.id] = article.isLiked;
                     likeState[article.id] = article.likes;
+                    savedState[article.id] = article.isSaved;
                 });
                 setLikedItems(likedState);
                 setLikeCounts(likeState);
+                setBookmarkedItems(savedState);
                 
                 if (isLoadMore) {
                     setArticles(prev => [...prev, ...newArticles]);
@@ -186,7 +202,7 @@ export default function ReaderSlider() {
                     Alert.alert('Error', 'Failed to like the post');
                 }
             } else {
-                const result = await reactionService.addReaction('story', id, 'like');
+                const result = await reactionService.removeReaction('story', id);
                 if (!result.success) {
                     setLikedItems(prev => ({ ...prev, [id]: isCurrentlyLiked }));
                     setLikeCounts(prev => ({ ...prev, [id]: currentLikes }));
@@ -202,17 +218,42 @@ export default function ReaderSlider() {
 
     const toggleBookmark = async (id) => {
         const newState = !bookmarkedItems[id];
+        
+        // Optimistic update
         setBookmarkedItems(prev => ({
             ...prev,
             [id]: newState
         }));
 
-        if (newState) {
-            await storyService.bookmarkStory(id);
-            Alert.alert('Saved', 'Article bookmarked successfully!');
-        } else {
-            await storyService.unbookmarkStory(id);
-            Alert.alert('Removed', 'Bookmark removed');
+        try {
+            const result = await libraryService.toggleSaved({
+                contentType: 'story',
+                contentId: id,
+                listType: 'saved'
+            });
+
+            if (result.success) {
+                if (newState) {
+                    Alert.alert('Saved', 'Article saved to library!');
+                } else {
+                    Alert.alert('Removed', 'Article removed from library');
+                }
+            } else {
+                // Revert on error
+                setBookmarkedItems(prev => ({
+                    ...prev,
+                    [id]: !newState
+                }));
+                Alert.alert('Error', result.error || 'Failed to save article');
+            }
+        } catch (error) {
+            console.error('Error toggling bookmark:', error);
+            // Revert on error
+            setBookmarkedItems(prev => ({
+                ...prev,
+                [id]: !newState
+            }));
+            Alert.alert('Error', 'Failed to save article. Please try again.');
         }
     };
 
