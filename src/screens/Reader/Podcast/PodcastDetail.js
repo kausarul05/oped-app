@@ -17,6 +17,7 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import libraryService from '../../../services/libraryService';
 import podcastService from '../../../services/podcastService';
 import reactionService from '../../../services/reactionService';
 
@@ -35,6 +36,7 @@ export default function PodcastDetail({ route, navigation }) {
     const [bookmarked, setBookmarked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
     const [currentUserId, setCurrentUserId] = useState(null);
+    const [savingBookmark, setSavingBookmark] = useState(false);
 
     // Get current user ID from storage
     useEffect(() => {
@@ -64,6 +66,7 @@ export default function PodcastDetail({ route, navigation }) {
     useEffect(() => {
         if (podcastId) {
             fetchPodcastDetail();
+            // checkBookmarkStatus();
         }
     }, [podcastId]);
 
@@ -106,6 +109,7 @@ export default function PodcastDetail({ route, navigation }) {
                     tags: podcastData.tags || [],
                     isPremium: podcastData.isPremium,
                     author: podcastData.author?.name,
+                    authorId: podcastData.author?._id,
                     authorImage: podcastData.author?.profileImage,
                     authorBio: podcastData.author?.bio,
                     createdAt: podcastData.createdAt,
@@ -120,6 +124,17 @@ export default function PodcastDetail({ route, navigation }) {
             setLoading(false);
         }
     };
+
+    // const checkBookmarkStatus = async () => {
+    //     try {
+    //         const result = await libraryService.isContentSaved(podcastId);
+    //         if (result.success) {
+    //             setBookmarked(result.isSaved);
+    //         }
+    //     } catch (error) {
+    //         console.error('Error checking bookmark status:', error);
+    //     }
+    // };
 
     // Clean up sound on unmount
     useEffect(() => {
@@ -216,15 +231,32 @@ export default function PodcastDetail({ route, navigation }) {
     };
 
     const toggleBookmark = async () => {
+        if (savingBookmark) return;
+        
+        setSavingBookmark(true);
         const newState = !bookmarked;
-        setBookmarked(newState);
-
-        if (newState) {
-            await podcastService.bookmarkPodcast(podcastData.id);
-            Alert.alert('Saved', 'Podcast bookmarked successfully!');
-        } else {
-            await podcastService.unbookmarkPodcast(podcastData.id);
-            Alert.alert('Removed', 'Bookmark removed');
+        
+        try {
+            const result = await libraryService.toggleSave({
+                contentType: 'podcast',
+                contentId: podcastData.id,
+                listType: 'readLater'
+            });
+            
+            if (result.success) {
+                setBookmarked(newState);
+                Alert.alert(
+                    'Success', 
+                    newState ? 'Added to Read Later' : 'Removed from Read Later'
+                );
+            } else {
+                Alert.alert('Error', result.error || 'Failed to update bookmark');
+            }
+        } catch (error) {
+            console.error('Error toggling bookmark:', error);
+            Alert.alert('Error', 'Failed to update bookmark');
+        } finally {
+            setSavingBookmark(false);
         }
     };
 
@@ -276,12 +308,20 @@ export default function PodcastDetail({ route, navigation }) {
                     </TouchableOpacity>
                     <ThemedText style={styles.headerTitle}>Podcast</ThemedText>
                     <View style={styles.headerActions}>
-                        <TouchableOpacity onPress={toggleBookmark} style={styles.headerAction}>
-                            <Ionicons 
-                                name={bookmarked ? "bookmark" : "bookmark-outline"} 
-                                size={22} 
-                                color={bookmarked ? "#4B59B3" : "#000"} 
-                            />
+                        <TouchableOpacity 
+                            onPress={toggleBookmark} 
+                            style={styles.headerAction}
+                            disabled={savingBookmark}
+                        >
+                            {savingBookmark ? (
+                                <ActivityIndicator size="small" color="#4B59B3" />
+                            ) : (
+                                <Ionicons 
+                                    name={bookmarked ? "bookmark" : "bookmark-outline"} 
+                                    size={22} 
+                                    color={bookmarked ? "#4B59B3" : "#000"} 
+                                />
+                            )}
                         </TouchableOpacity>
                         <TouchableOpacity onPress={handleShare} style={styles.headerAction}>
                             <FontAwesome6 name="share-from-square" size={20} color="#000" />

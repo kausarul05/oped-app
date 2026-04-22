@@ -1,7 +1,6 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
 import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -18,13 +17,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import podcastService from '../../../services/podcastService';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = width - 32; // Full width minus padding
+const CARD_WIDTH = width - 32;
 
 export default function PodcastHome({ navigation }) {
     const { colors } = useTheme();
     const [activeIndex, setActiveIndex] = useState(0);
-    const [playingId, setPlayingId] = useState(null);
-    const [sound, setSound] = useState(null);
     const [expertOpinions, setExpertOpinions] = useState([]);
     const [topEpisodes, setTopEpisodes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -43,7 +40,6 @@ export default function PodcastHome({ navigation }) {
                     title: podcast.title,
                     category: 'Expert opinions',
                     image: podcast.coverImage,
-                    audioUrl: podcast.audioUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
                     duration: `${podcast.audioDuration} min`,
                     date: formatDate(podcast.createdAt),
                     isPremium: podcast.isPremium,
@@ -64,7 +60,6 @@ export default function PodcastHome({ navigation }) {
                     }),
                     category: podcast.category,
                     image: podcast.coverImage,
-                    audioUrl: podcast.audioUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
                     isPremium: podcast.isPremium,
                 }));
                 setTopEpisodes(formattedTopEpisodes);
@@ -91,82 +86,6 @@ export default function PodcastHome({ navigation }) {
         fetchPodcasts();
     }, []);
 
-    // Clean up sound on unmount
-    useEffect(() => {
-        return () => {
-            if (sound) {
-                sound.unloadAsync();
-            }
-        };
-    }, []);
-
-    // Stop audio when navigating away
-    useEffect(() => {
-        const unsubscribe = navigation.addListener('blur', () => {
-            if (sound) {
-                sound.stopAsync();
-                sound.unloadAsync();
-                setSound(null);
-                setPlayingId(null);
-            }
-        });
-
-        return unsubscribe;
-    }, [navigation, sound]);
-
-    // Audio playback functions
-    const playAudio = async (item) => {
-        try {
-            if (sound) {
-                await sound.stopAsync();
-                await sound.unloadAsync();
-                setSound(null);
-                setPlayingId(null);
-            }
-
-            const { granted } = await Audio.requestPermissionsAsync();
-            if (!granted) {
-                Alert.alert('Permission Required', 'Please grant audio permissions to play podcasts.');
-                return;
-            }
-
-            await Audio.setAudioModeAsync({
-                allowsRecordingIOS: false,
-                staysActiveInBackground: false,
-                playsInSilentModeIOS: true,
-                shouldDuckAndroid: true,
-                playThroughEarpieceAndroid: false,
-            });
-
-            const { sound: newSound } = await Audio.Sound.createAsync(
-                { uri: item.audioUrl },
-                { shouldPlay: true },
-                (status) => {
-                    if (status.didJustFinish) {
-                        setPlayingId(null);
-                        setSound(null);
-                    }
-                }
-            );
-
-            setSound(newSound);
-            setPlayingId(item.id);
-
-        } catch (error) {
-            console.error('Error playing audio:', error);
-            Alert.alert('Error', 'Failed to play audio. Please try again.');
-        }
-    };
-
-    const stopAudio = async () => {
-        if (sound) {
-            await sound.stopAsync();
-            await sound.unloadAsync();
-            setSound(null);
-            setPlayingId(null);
-        }
-    };
-
     const onViewableItemsChanged = useRef(({ viewableItems }) => {
         if (viewableItems.length > 0) {
             setActiveIndex(viewableItems[0].index);
@@ -178,26 +97,10 @@ export default function PodcastHome({ navigation }) {
     }).current;
 
     const handleExpertCardPress = (item) => {
-        if (sound) {
-            stopAudio();
-        }
-        console.log("item", item.id)
         navigation.navigate('PodcastDetail', { podcastId: item.id });
     };
 
-    const handleExpertListenPress = async (item, event) => {
-        event.stopPropagation();
-
-        if (playingId === item.id) {
-            await stopAudio();
-        } else {
-            await playAudio(item);
-        }
-    };
-
     const renderExpertOpinionItem = ({ item }) => {
-        const isPlaying = playingId === item.id;
-
         return (
             <TouchableOpacity
                 style={[styles.expertCard, { width: CARD_WIDTH }]}
@@ -225,45 +128,20 @@ export default function PodcastHome({ navigation }) {
                     <View style={styles.expertTextContent}>
                         <ThemedText style={styles.expertTitle}>{item.title}</ThemedText>
                     </View>
-                    <TouchableOpacity
-                        style={styles.expertListenContainer}
-                        onPress={(event) => handleExpertListenPress(item, event)}
-                    >
-                        <Ionicons
-                            name={isPlaying ? "pause-circle" : "play-circle"}
-                            size={26}
-                            color="#fff"
-                        />
-                        <ThemedText style={styles.expertListenText}>
-                            {isPlaying ? 'Pause' : 'Listen'}
-                        </ThemedText>
-                    </TouchableOpacity>
+                    <View style={styles.expertListenContainer}>
+                        <Ionicons name="play-circle" size={26} color="#fff" />
+                        <ThemedText style={styles.expertListenText}>Listen</ThemedText>
+                    </View>
                 </View>
             </TouchableOpacity>
         );
     };
 
     const handleTopEpisodeCardPress = (episode) => {
-        if (sound) {
-            stopAudio();
-        }
-        console.log("episode", episode.id)
         navigation.navigate('PodcastDetail', { podcastId: episode.id });
     };
 
-    const handleTopEpisodeListenPress = async (episode, event) => {
-        event.stopPropagation();
-
-        if (playingId === episode.id) {
-            await stopAudio();
-        } else {
-            await playAudio(episode);
-        }
-    };
-
     const renderTopEpisodeItem = ({ item }) => {
-        const isPlaying = playingId === item.id;
-
         return (
             <TouchableOpacity
                 style={styles.episodeCard}
@@ -286,15 +164,11 @@ export default function PodcastHome({ navigation }) {
                             <Ionicons name="time-outline" size={14} color="#999" />
                             <ThemedText style={styles.episodeDuration}>{item.duration} • {item.fullDate}</ThemedText>
                         </View>
-                        <TouchableOpacity
-                            onPress={(event) => handleTopEpisodeListenPress(item, event)}
-                        >
-                            <Ionicons
-                                name={isPlaying ? "pause-circle" : "play-circle"}
-                                size={36}
-                                color={isPlaying ? "#FF3B30" : "#4B59B3"}
-                            />
-                        </TouchableOpacity>
+                        <Ionicons
+                            name="play-circle"
+                            size={36}
+                            color="#4B59B3"
+                        />
                     </View>
                 </View>
             </TouchableOpacity>
@@ -370,15 +244,11 @@ export default function PodcastHome({ navigation }) {
                                             <Ionicons name="time-outline" size={14} color="#999" />
                                             <ThemedText style={styles.episodeDuration}>{episode.duration} • {episode.fullDate}</ThemedText>
                                         </View>
-                                        <TouchableOpacity
-                                            onPress={(event) => handleTopEpisodeListenPress(episode, event)}
-                                        >
-                                            <Ionicons
-                                                name={playingId === episode.id ? "pause-circle" : "play-circle"}
-                                                size={36}
-                                                color={playingId === episode.id ? "#FF3B30" : "#4B59B3"}
-                                            />
-                                        </TouchableOpacity>
+                                        <Ionicons
+                                            name="play-circle"
+                                            size={36}
+                                            color="#4B59B3"
+                                        />
                                     </View>
                                 </View>
                             </TouchableOpacity>

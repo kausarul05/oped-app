@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 // import PodcastDetail from '../screens/Podcast/PodcastDetail';
 import PodcastDetail from '../screens/Reader/Podcast/PodcastDetail';
 import PodcastHome from '../screens/Reader/Podcast/PodcastHome';
+import AuthorProfile from '../screens/Reader/ReaderHome/AuthorProfile';
 // import PodcastPlayer from '../screens/Podcast/PodcastPlayer';
 
 const Stack = createNativeStackNavigator();
@@ -15,6 +16,7 @@ export default function PodcastStack() {
         >
             <Stack.Screen name="PodcastHome" component={PodcastHome} />
              <Stack.Screen name="PodcastDetail" component={PodcastDetail} />
+             <Stack.Screen name="AuthorProfile" component={AuthorProfile} />
             {/*<Stack.Screen name="PodcastPlayer" component={PodcastPlayer} /> */}
         </Stack.Navigator>
     );
