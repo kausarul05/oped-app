@@ -46,7 +46,7 @@ const libraryService = {
     getSavedItems: async (listType = 'saved', page = 1, limit = 10) => {
         try {
             const token = await AsyncStorage.getItem('authToken');
-            const response = await api.get('/api/v1/library/items', {
+            const response = await api.get('/api/v1/library/saved', {
                 params: { listType, page, limit },
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
             });
