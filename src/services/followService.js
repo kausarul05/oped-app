@@ -111,7 +111,7 @@ const followService = {
         try {
             const token = await AsyncStorage.getItem('authToken');
             
-            const response = await api.get(`/api/v1/follow/following/${authorId}`, {
+            const response = await api.get(`/api/v1/follow/my-following?page=${page}&limit=${limit}`, {
                 params: { page, limit },
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
             });

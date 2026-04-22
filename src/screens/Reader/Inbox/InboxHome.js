@@ -1,32 +1,25 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Foundation, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     FlatList,
     Image,
     Modal,
+    RefreshControl,
     Share,
     StyleSheet,
     TouchableOpacity,
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-// Fake profile images array
-const profileImages = [
-    'https://randomuser.me/api/portraits/men/1.jpg',
-    'https://randomuser.me/api/portraits/women/2.jpg',
-    'https://randomuser.me/api/portraits/men/3.jpg',
-    'https://randomuser.me/api/portraits/women/4.jpg',
-    'https://randomuser.me/api/portraits/men/5.jpg',
-    'https://randomuser.me/api/portraits/women/6.jpg',
-    'https://randomuser.me/api/portraits/men/7.jpg',
-    'https://randomuser.me/api/portraits/women/8.jpg',
-    'https://randomuser.me/api/portraits/men/9.jpg',
-    'https://randomuser.me/api/portraits/women/10.jpg',
-];
+import followService from '../../../services/followService';
+import libraryService from '../../../services/libraryService';
+import reactionService from '../../../services/reactionService';
+import storyService from '../../../services/storyService';
 
 export default function InboxHome({ navigation }) {
     const { colors } = useTheme();
@@ -34,185 +27,270 @@ export default function InboxHome({ navigation }) {
     const [likeCounts, setLikeCounts] = useState({});
     const [commentCounts, setCommentCounts] = useState({});
     const [shareCounts, setShareCounts] = useState({});
-    const [menuVisible, setMenuVisible] = useState(null);
+    const [menuVisible, setMenuVisible] = useState(false);
     const [selectedPost, setSelectedPost] = useState(null);
+    
+    // API states
+    const [newsletters, setNewsletters] = useState([]);
+    const [storyPosts, setStoryPosts] = useState([]);
+    const [loadingNewsletters, setLoadingNewsletters] = useState(true);
+    const [loadingStories, setLoadingStories] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState(null);
 
-    // Newsletter data
-    const newsletters = [
-        {
-            id: '1',
-            name: 'Tech Weekly',
-            avatar: 'https://randomuser.me/api/portraits/men/2.jpg',
-            time: '2 hours ago',
-        },
-        {
-            id: '2',
-            name: 'Business Insider',
-            avatar: 'https://randomuser.me/api/portraits/women/3.jpg',
-            time: '5 hours ago',
-        },
-        {
-            id: '3',
-            name: 'Culture Daily',
-            avatar: 'https://randomuser.me/api/portraits/men/4.jpg',
-            time: '1 day ago',
-        },
-    ];
+    // Get current user ID from storage
+    useEffect(() => {
+        const getCurrentUser = async () => {
+            try {
+                const userDataString = await AsyncStorage.getItem('userData');
+                if (userDataString) {
+                    const userData = JSON.parse(userDataString);
+                    let userId = null;
+                    if (userData.data?.id) {
+                        userId = userData.data.id;
+                    } else if (userData.id) {
+                        userId = userData.id;
+                    } else if (userData._id) {
+                        userId = userData._id;
+                    }
+                    setCurrentUserId(userId);
+                }
+            } catch (error) {
+                console.error('Error getting current user:', error);
+            }
+        };
+        getCurrentUser();
+    }, []);
 
-    // Story posts data matching your image design
-    const storyPosts = [
-        {
-            id: '1',
-            title: 'Manchester United',
-            timeAgo: '10 hours ago',
-            headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism',
-            description: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told, shared, and trusted the world.',
-            image: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            likes: '9M',
-            comments: '15K',
-            shares: '851',
-            readTime: '5 min',
-            type: 'Article',
-            profileImage: profileImages[0],
-            likeCount: 3.5,
-            commentCount: 45,
-            shareCount: 150,
-            stats: {
-                likes: '91M',
-                comments: '75K',
-                shares: '851'
-            }
-        },
-        {
-            id: '2',
-            title: 'Manchester United',
-            timeAgo: '10 hours ago',
-            headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism',
-            description: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told, shared, and trusted the world.',
-            image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            likes: '9M',
-            comments: '15K',
-            shares: '851',
-            readTime: '5 min',
-            type: 'Article',
-            profileImage: profileImages[1],
-            likeCount: 3.5,
-            commentCount: 45,
-            shareCount: 150,
-            stats: {
-                likes: '91M',
-                comments: '75K',
-                shares: '851'
-            }
-        },
-        {
-            id: '3',
-            title: 'Manchester United',
-            timeAgo: '10 hours ago',
-            headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism',
-            description: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told, shared, and trusted the world.',
-            image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            likes: '9M',
-            comments: '15K',
-            shares: '851',
-            readTime: '5 min',
-            type: 'Article',
-            profileImage: profileImages[2],
-            likeCount: 3.5,
-            commentCount: 45,
-            shareCount: 150,
-            stats: {
-                likes: '91M',
-                comments: '75K',
-                shares: '851'
-            }
-        },
-    ];
+    // Fetch following list (newsletters)
+    const fetchFollowingList = async () => {
+        try {
+            const result = await followService.getFollowing(currentUserId, 1, 20);
 
-    const toggleLike = (id, currentLikeCount) => {
-        setLikedPosts(prev => ({
-            ...prev,
-            [id]: !prev[id]
+            console.log("result xx", result)
+            
+            if (result.success && result.data) {
+                const formattedNewsletters = result.data.map(follow => ({
+                    id: follow._id,
+                    name: follow.name,
+                    avatar: follow.profileImage,
+                    bio: follow.bio,
+                    followersCount: follow.followersCount,
+                }));
+                setNewsletters(formattedNewsletters);
+            }
+        } catch (error) {
+            console.error('Error fetching following list:', error);
+        } finally {
+            setLoadingNewsletters(false);
+        }
+    };
+
+    // Fetch stories
+    const fetchStories = async () => {
+        try {
+            const result = await storyService.getStories('technology', 1, 10);
+            
+            if (result.success && result.data) {
+                const formattedStories = await Promise.all(result.data.map(async (story) => {
+                    let likeStatus = false;
+                    let totalLikes = story.likes || 0;
+                    let totalComments = 0;
+
+                    try {
+                        const reactionResult = await reactionService.getReactions(story._id);
+                        if (reactionResult.success && reactionResult.data) {
+                            totalLikes = reactionResult.data.summary?.total || 0;
+                            likeStatus = reactionResult.data.myReaction === 'like';
+                        }
+                    } catch (error) {
+                        console.error('Error fetching reactions:', error);
+                    }
+
+                    try {
+                        const commentResult = await storyService.getCommentsCount?.(story._id);
+                        if (commentResult?.success) {
+                            totalComments = commentResult.count || 0;
+                        }
+                    } catch (error) {
+                        console.error('Error fetching comment count:', error);
+                    }
+
+                    return {
+                        id: story._id,
+                        title: story.author?.name || 'Unknown Author',
+                        timeAgo: formatTimeAgo(story.createdAt),
+                        headline: story.title,
+                        description: story.summary,
+                        image: story.coverImage,
+                        readTime: `${story.readingTime} min`,
+                        type: story.isPremium ? 'Premium' : 'Article',
+                        profileImage: story.author?.profileImage,
+                        likeCount: totalLikes,
+                        commentCount: totalComments,
+                        shareCount: story.shares || 0,
+                        createdAt: story.createdAt,
+                        isLiked: likeStatus,
+                        stats: {
+                            likes: formatNumber(totalLikes),
+                            comments: formatNumber(totalComments),
+                            shares: formatNumber(story.shares || 0)
+                        }
+                    };
+                }));
+                
+                setStoryPosts(formattedStories);
+                
+                // Set initial like states
+                const likedState = {};
+                const likeState = {};
+                const commentState = {};
+                const shareState = {};
+                formattedStories.forEach(post => {
+                    likedState[post.id] = post.isLiked;
+                    likeState[post.id] = post.likeCount;
+                    commentState[post.id] = post.commentCount;
+                    shareState[post.id] = post.shareCount;
+                });
+                setLikedPosts(likedState);
+                setLikeCounts(likeState);
+                setCommentCounts(commentState);
+                setShareCounts(shareState);
+            }
+        } catch (error) {
+            console.error('Error fetching stories:', error);
+        } finally {
+            setLoadingStories(false);
+        }
+    };
+
+    const formatTimeAgo = (dateString) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+        
+        if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+        if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+        return date.toLocaleDateString();
+    };
+
+    const formatNumber = (num) => {
+        if (!num) return '0';
+        if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+        if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+        return num.toString();
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await Promise.all([fetchFollowingList(), fetchStories()]);
+        setRefreshing(false);
+    };
+
+    useEffect(() => {
+        console.log("current", currentUserId)
+        if (currentUserId) {
+            fetchFollowingList();
+        }
+        fetchStories();
+    }, [currentUserId]);
+
+    const toggleLike = async (id, currentLikeCount) => {
+        const isCurrentlyLiked = likedPosts[id];
+        const newLikedState = !isCurrentlyLiked;
+
+        setLikedPosts(prev => ({ ...prev, [id]: newLikedState }));
+        setLikeCounts(prev => ({ 
+            ...prev, 
+            [id]: newLikedState ? currentLikeCount + 1 : currentLikeCount - 1 
         }));
 
-        setLikeCounts(prev => ({
-            ...prev,
-            [id]: !likedPosts[id] ? currentLikeCount + 0.1 : currentLikeCount - 0.1
-        }));
-
-        if (!likedPosts[id]) {
-            Alert.alert('Liked', 'You liked this post!');
+        try {
+            if (!isCurrentlyLiked) {
+                const result = await reactionService.addReaction('story', id, 'like');
+                if (!result.success) {
+                    setLikedPosts(prev => ({ ...prev, [id]: isCurrentlyLiked }));
+                    setLikeCounts(prev => ({ ...prev, [id]: currentLikeCount }));
+                    Alert.alert('Error', 'Failed to like the post');
+                }
+            } else {
+                const result = await reactionService.removeReaction('story', id);
+                if (!result.success) {
+                    setLikedPosts(prev => ({ ...prev, [id]: isCurrentlyLiked }));
+                    setLikeCounts(prev => ({ ...prev, [id]: currentLikeCount }));
+                    Alert.alert('Error', 'Failed to unlike the post');
+                }
+            }
+        } catch (error) {
+            console.error('Error toggling like:', error);
+            setLikedPosts(prev => ({ ...prev, [id]: isCurrentlyLiked }));
+            setLikeCounts(prev => ({ ...prev, [id]: currentLikeCount }));
         }
     };
 
     const handleComment = (post) => {
-        Alert.alert(
-            'Comments',
-            `This post has ${post.commentCount}k comments. Would you like to add one?`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'View Comments',
-                    onPress: () => {
-                        // Increment comment count when viewing comments
-                        setCommentCounts(prev => ({
-                            ...prev,
-                            [post.id]: (prev[post.id] || 0) + 1
-                        }));
-                        console.log('View comments');
-                    }
-                },
-                {
-                    text: 'Add Comment',
-                    onPress: () => {
-                        // Increment comment count when adding comment
-                        setCommentCounts(prev => ({
-                            ...prev,
-                            [post.id]: (prev[post.id] || 0) + 1
-                        }));
-                        Alert.alert('Add Comment', 'Comment added successfully!');
-                    }
-                },
-            ]
-        );
+        navigation.navigate('StoryDetail', { storyId: post.id });
     };
 
     const handleShare = async (post) => {
         try {
+            const shareUrl = `https://hoped.com/story/${post.id}`;
             const result = await Share.share({
-                message: `${post.headline}\n\n${post.description}\n\nRead more on HOPED app`,
-                title: 'Share Article'
+                message: `${post.headline}\n\nRead more: ${shareUrl}\n\nShared via HOPED App`,
+                title: 'Share Article',
+                url: shareUrl
             });
 
             if (result.action === Share.sharedAction) {
-                // Increment share count when shared
                 setShareCounts(prev => ({
                     ...prev,
                     [post.id]: (prev[post.id] || 0) + 1
                 }));
-                Alert.alert('Shared', 'Post shared successfully!');
             }
         } catch (error) {
             console.log('Error sharing:', error);
         }
     };
 
-    const handleThreeDotPress = (postId) => {
-        setSelectedPost(postId);
+    const handleSavePost = async (postId) => {
+        try {
+            const result = await libraryService.toggleSave({
+                contentType: 'story',
+                contentId: postId,
+                listType: 'saved'
+            });
+            
+            if (result.success) {
+                Alert.alert('Success', result.message || 'Post saved to library!');
+            } else {
+                Alert.alert('Error', result.error || 'Failed to save post');
+            }
+        } catch (error) {
+            console.error('Error saving post:', error);
+            Alert.alert('Error', 'Failed to save post');
+        }
+    };
+
+    const handleThreeDotPress = (post) => {
+        setSelectedPost(post);
         setMenuVisible(true);
     };
 
     const handleMenuOption = (option) => {
         setMenuVisible(false);
         switch (option) {
+            case 'save':
+                if (selectedPost) {
+                    handleSavePost(selectedPost.id);
+                }
+                break;
             case 'report':
                 Alert.alert('Report', 'Thank you for reporting. We will review this post.');
                 break;
             case 'hide':
                 Alert.alert('Hide', 'This post will be hidden from your feed.');
-                break;
-            case 'save':
-                Alert.alert('Save', 'Post saved to bookmarks!');
                 break;
             case 'notInterested':
                 Alert.alert('Not Interested', 'We will show fewer posts like this.');
@@ -223,38 +301,29 @@ export default function InboxHome({ navigation }) {
     const renderNewsletterItem = ({ item }) => (
         <TouchableOpacity
             style={styles.newsletterItem}
-            onPress={() => navigation.navigate("InboxAuthProfile")}
+            onPress={() => navigation.navigate("AuthorProfile", { 
+                authorId: item.id,
+                authorName: item.name,
+                authorImage: item.avatar,
+                authorBio: item.bio
+            })}
         >
             <Image source={{ uri: item.avatar }} style={styles.newsletterAvatar} />
-            {/* <View style={styles.newsletterContent}>
-                <ThemedText style={styles.newsletterName}>{item.name}</ThemedText>
-                <ThemedText style={styles.newsletterTime}>{item.time}</ThemedText>
-            </View> */}
+            <ThemedText style={styles.newsletterName} numberOfLines={1}>{item.name}</ThemedText>
         </TouchableOpacity>
     );
 
     const renderStoryPost = ({ item }) => {
         const isLiked = likedPosts[item.id] || false;
-
-        // Get dynamic counts
-        const displayLikes = likeCounts[item.id]
-            ? likeCounts[item.id].toFixed(1) + 'M'
-            : item.stats.likes;
-
-        const displayComments = commentCounts[item.id]
-            ? (parseInt(item.stats.comments) + commentCounts[item.id]) + 'K'
-            : item.stats.comments;
-
-        const displayShares = shareCounts[item.id]
-            ? parseInt(item.stats.shares) + shareCounts[item.id]
-            : item.stats.shares;
+        const displayLikes = likeCounts[item.id] !== undefined ? likeCounts[item.id] : item.likeCount;
+        const displayComments = commentCounts[item.id] !== undefined ? commentCounts[item.id] : item.commentCount;
+        const displayShares = shareCounts[item.id] !== undefined ? shareCounts[item.id] : item.shareCount;
 
         return (
             <View style={styles.storyContainer}>
-                {/* Header Section */}
                 <TouchableOpacity
                     activeOpacity={0.9}
-                    onPress={() => navigation.navigate('StoryDetail', { postId: item.id })}
+                    onPress={() => navigation.navigate('StoryDetail', { storyId: item.id })}
                 >
                     <View style={styles.storyHeader}>
                         <View style={styles.storyHeaderLeft}>
@@ -266,23 +335,23 @@ export default function InboxHome({ navigation }) {
                                 </View>
                             </View>
                         </View>
-                        <TouchableOpacity onPress={() => handleThreeDotPress(item.id)}>
+                        <TouchableOpacity onPress={() => handleThreeDotPress(item)}>
                             <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
                         </TouchableOpacity>
                     </View>
 
-                    {/* Content Section */}
                     <View style={styles.storyContentSection}>
                         <ThemedText style={styles.storyHeadline}>{item.headline}</ThemedText>
-                        <ThemedText style={styles.storyDescription}>{item.description}</ThemedText>
+                        <ThemedText style={styles.storyDescription} numberOfLines={2}>
+                            {item.description}
+                        </ThemedText>
                     </View>
                 </TouchableOpacity>
 
-                {/* Stats Section - 91M    75K    851 */}
                 <View style={styles.storyStatsContainer}>
                     <TouchableOpacity
                         style={styles.storyStatItem}
-                        onPress={() => toggleLike(item.id, item.likeCount)}
+                        onPress={() => toggleLike(item.id, displayLikes)}
                     >
                         <Foundation
                             name="like"
@@ -290,7 +359,7 @@ export default function InboxHome({ navigation }) {
                             color={isLiked ? "#4B59B3" : "#666"}
                         />
                         <ThemedText style={[styles.storyStatText, isLiked && { color: '#4B59B3' }]}>
-                            {displayLikes}
+                            {formatNumber(displayLikes)}
                         </ThemedText>
                     </TouchableOpacity>
 
@@ -298,13 +367,9 @@ export default function InboxHome({ navigation }) {
                         style={styles.storyStatItem}
                         onPress={() => handleComment(item)}
                     >
-                        <Ionicons
-                            name="chatbubble-outline"
-                            size={16}
-                            color="#666"
-                        />
+                        <Ionicons name="chatbubble-outline" size={16} color="#666" />
                         <ThemedText style={styles.storyStatText}>
-                            {displayComments}
+                            {formatNumber(displayComments)}
                         </ThemedText>
                     </TouchableOpacity>
 
@@ -312,25 +377,20 @@ export default function InboxHome({ navigation }) {
                         style={styles.storyStatItem}
                         onPress={() => handleShare(item)}
                     >
-                        <Ionicons
-                            name="share-social-outline"
-                            size={16}
-                            color="#666"
-                        />
+                        <Ionicons name="share-social-outline" size={16} color="#666" />
                         <ThemedText style={styles.storyStatText}>
-                            {displayShares}
+                            {formatNumber(displayShares)}
                         </ThemedText>
                     </TouchableOpacity>
                 </View>
 
-                {/* Footer with Reading Time and Article Type */}
                 <TouchableOpacity
                     activeOpacity={0.9}
-                    onPress={() => navigation.navigate('StoryDetail', { postId: item.id })}
+                    onPress={() => navigation.navigate('StoryDetail', { storyId: item.id })}
                 >
                     <View style={styles.storyFooter}>
                         <ThemedText style={styles.storyFooterText}>
-                            Readings Time: {item.readTime}
+                            Reading Time: {item.readTime}
                         </ThemedText>
                         <View style={styles.storyArticleBadge}>
                             <ThemedText style={styles.storyArticleBadgeText}>{item.type}</ThemedText>
@@ -340,6 +400,14 @@ export default function InboxHome({ navigation }) {
             </View>
         );
     };
+
+    if (loadingNewsletters && loadingStories && !refreshing) {
+        return (
+            <ThemedView style={[styles.container, styles.centerContainer]}>
+                <ActivityIndicator size="large" color="#4B59B3" />
+            </ThemedView>
+        );
+    }
 
     return (
         <ThemedView style={styles.container}>
@@ -375,14 +443,25 @@ export default function InboxHome({ navigation }) {
                             <ThemedText style={styles.newsletterSeeAll}>See All &gt;</ThemedText>
                         </TouchableOpacity>
                     </View>
-                    <FlatList
-                        data={newsletters}
-                        renderItem={renderNewsletterItem}
-                        keyExtractor={(item) => item.id}
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.newsletterList}
-                    />
+                    {loadingNewsletters ? (
+                        <View style={styles.newsletterLoader}>
+                            <ActivityIndicator size="small" color="#4B59B3" />
+                        </View>
+                    ) : newsletters.length > 0 ? (
+                        <FlatList
+                            data={newsletters}
+                            renderItem={renderNewsletterItem}
+                            keyExtractor={(item) => item.id}
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.newsletterList}
+                        />
+                    ) : (
+                        <View style={styles.emptyNewsletter}>
+                            <ThemedText style={styles.emptyNewsletterText}>No newsletters yet</ThemedText>
+                            <ThemedText style={styles.emptyNewsletterSubText}>Follow authors to see them here</ThemedText>
+                        </View>
+                    )}
                 </View>
 
                 {/* Stories Section */}
@@ -394,6 +473,20 @@ export default function InboxHome({ navigation }) {
                         keyExtractor={(item) => item.id}
                         showsVerticalScrollIndicator={false}
                         contentContainerStyle={styles.storiesList}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                colors={['#4B59B3']}
+                            />
+                        }
+                        ListEmptyComponent={
+                            !loadingStories ? (
+                                <View style={styles.emptyStories}>
+                                    <ThemedText style={styles.emptyStoriesText}>No stories available</ThemedText>
+                                </View>
+                            ) : null
+                        }
                     />
                 </View>
             </SafeAreaView>
@@ -464,6 +557,10 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#FFFFFF',
     },
+    centerContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -498,7 +595,6 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#4B59B3',
     },
-    // Newsletter Section
     newsletterSection: {
         paddingVertical: 16,
         borderBottomWidth: 1,
@@ -540,24 +636,32 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#4B59B3',
     },
-    newsletterContent: {
-        alignItems: 'center',
-    },
     newsletterName: {
         fontSize: 12,
         fontWeight: '500',
         fontFamily: 'CoFoRaffineMedium',
         color: '#000',
         textAlign: 'center',
-        marginBottom: 2,
     },
-    newsletterTime: {
-        fontSize: 10,
-        fontFamily: 'tenez',
+    newsletterLoader: {
+        paddingVertical: 20,
+        alignItems: 'center',
+    },
+    emptyNewsletter: {
+        alignItems: 'center',
+        paddingVertical: 30,
+    },
+    emptyNewsletterText: {
+        fontSize: 14,
+        fontFamily: 'CoFoRaffineMedium',
         color: '#999',
-        textAlign: 'center',
     },
-    // Stories Section
+    emptyNewsletterSubText: {
+        fontSize: 12,
+        fontFamily: 'tenez',
+        color: '#ccc',
+        marginTop: 4,
+    },
     storiesSection: {
         flex: 1,
         paddingTop: 16,
@@ -679,6 +783,15 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontFamily: 'CoFoRaffineBold',
         color: '#3448D6',
+    },
+    emptyStories: {
+        alignItems: 'center',
+        paddingVertical: 60,
+    },
+    emptyStoriesText: {
+        fontSize: 16,
+        fontFamily: 'tenez',
+        color: '#999',
     },
     modalOverlay: {
         flex: 1,

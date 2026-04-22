@@ -32,8 +32,6 @@ export default function AuthorProfile({ route, navigation }) {
     const [totalStories, setTotalStories] = useState(0);
     const [totalPodcasts, setTotalPodcasts] = useState(0);
 
-    console.log("author id", authorId)
-
     // Single API call to get everything
     useEffect(() => {
         if (authorId) {
