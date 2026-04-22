@@ -136,6 +136,24 @@ const authService = {
         }
     },
 
+    // Get Reader Profile
+    getReaderProfile: async () => {
+        try {
+            const token = await AsyncStorage.getItem('authToken');
+            const response = await api.get('/api/v1/reader/profile/get-profile', {
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
+
+            if (response.data && response.data.success) {
+                return { success: true, data: response.data.data };
+            }
+            return { success: false, error: 'No data found' };
+        } catch (error) {
+            console.error('Get reader profile error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
     // Get Writer Profile
     getWriterProfile: async () => {
         try {
@@ -166,6 +184,27 @@ const authService = {
             return { success: false, error: response.data?.message || 'Failed to update profile' };
         } catch (error) {
             console.error('Update writer profile error:', error);
+            return { success: false, error: error.response?.data?.message || error.message };
+        }
+    },
+
+    // Update Reader Profile
+    updateReaderProfile: async (formData) => {
+        try {
+            const token = await AsyncStorage.getItem('authToken');
+            const response = await api.patch('/api/v1/reader/profile/edit', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    Authorization: token ? `Bearer ${token}` : ''
+                }
+            });
+
+            if (response.data && response.data.success) {
+                return { success: true, data: response.data.data };
+            }
+            return { success: false, error: response.data?.message || 'Failed to update profile' };
+        } catch (error) {
+            console.error('Update reader profile error:', error);
             return { success: false, error: error.response?.data?.message || error.message };
         }
     },

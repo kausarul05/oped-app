@@ -3,8 +3,9 @@ import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Image,
     ScrollView,
@@ -14,6 +15,7 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import authService from '../../../../services/authService';
 
 export default function EditProfile({ navigation }) {
     const { colors } = useTheme();
@@ -24,15 +26,12 @@ export default function EditProfile({ navigation }) {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [age, setAge] = useState('');
     const [city, setCity] = useState('');
+    const [bio, setBio] = useState('');
     const [selectedInterests, setSelectedInterests] = useState([]);
     const [profileImage, setProfileImage] = useState(null);
     const [loading, setLoading] = useState(false);
-
-    // User data
-    const user = {
-        name: 'Eric Lach',
-        email: 'eric.lach@example.com',
-    };
+    const [fetchingProfile, setFetchingProfile] = useState(true);
+    const [originalProfileImage, setOriginalProfileImage] = useState(null);
 
     // Interests data
     const interests = [
@@ -47,6 +46,39 @@ export default function EditProfile({ navigation }) {
         'Entertainment',
         'Science',
     ];
+
+    // Fetch user profile data using authService
+    const fetchUserProfile = async () => {
+        try {
+            const result = await authService.getReaderProfile();
+            
+            if (result.success && result.data) {
+                const profile = result.data;
+                setFullName(profile.name || '');
+                setEmail(profile.email || '');
+                setPhoneNumber(profile.phoneNumber || '');
+                setAge(profile.age ? profile.age.toString() : '');
+                setCity(profile.city || '');
+                setBio(profile.bio || '');
+                setSelectedInterests(profile.interests || []);
+                if (profile.profileImage) {
+                    setProfileImage(profile.profileImage);
+                    setOriginalProfileImage(profile.profileImage);
+                }
+            } else {
+                Alert.alert('Error', result.error || 'Failed to load profile data');
+            }
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+            Alert.alert('Error', 'Failed to load profile data');
+        } finally {
+            setFetchingProfile(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchUserProfile();
+    }, []);
 
     const toggleInterest = (interest) => {
         if (selectedInterests.includes(interest)) {
@@ -70,7 +102,7 @@ export default function EditProfile({ navigation }) {
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             aspect: [1, 1],
-            quality: 1,
+            quality: 0.8,
         });
 
         if (!result.canceled) {
@@ -78,22 +110,76 @@ export default function EditProfile({ navigation }) {
         }
     };
 
-    const handleSaveChanges = () => {
+    const handleSaveChanges = async () => {
         // Validate form
-        if (!fullName || !email || !phoneNumber || !age || !city || selectedInterests.length === 0) {
-            Alert.alert('Error', 'Please fill in all fields and select at least one interest');
+        if (!fullName.trim()) {
+            Alert.alert('Error', 'Please enter your full name');
+            return;
+        }
+
+        if (!email.trim()) {
+            Alert.alert('Error', 'Please enter your email');
+            return;
+        }
+
+        if (!phoneNumber.trim()) {
+            Alert.alert('Error', 'Please enter your phone number');
             return;
         }
 
         setLoading(true);
-        
-        // Simulate API call
-        setTimeout(() => {
+
+        try {
+            // Create form data for multipart upload
+            const formData = new FormData();
+            
+            // Add text fields
+            formData.append('name', fullName);
+            formData.append('email', email);
+            formData.append('phoneNumber', phoneNumber);
+            formData.append('age', age);
+            formData.append('city', city);
+            formData.append('bio', bio);
+            
+            // Add interests as JSON string
+            formData.append('interests', JSON.stringify(selectedInterests));
+            
+            // Add profile image if changed
+            if (profileImage && profileImage !== originalProfileImage) {
+                const filename = profileImage.split('/').pop();
+                const match = /\.(\w+)$/.exec(filename);
+                const type = match ? `image/${match[1]}` : 'image/jpeg';
+                
+                formData.append('profileImage', {
+                    uri: profileImage,
+                    name: filename,
+                    type: type,
+                });
+            }
+
+            const result = await authService.updateReaderProfile(formData);
+
+            if (result.success) {
+                Alert.alert('Success', 'Profile updated successfully!');
+                navigation.goBack();
+            } else {
+                Alert.alert('Error', result.error || 'Failed to update profile');
+            }
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            Alert.alert('Error', 'Failed to update profile');
+        } finally {
             setLoading(false);
-            Alert.alert('Success', 'Profile updated successfully!');
-            navigation.goBack();
-        }, 2000);
+        }
     };
+
+    if (fetchingProfile) {
+        return (
+            <ThemedView style={[styles.container, styles.centerContainer]}>
+                <ActivityIndicator size="large" color="#4B59B3" />
+            </ThemedView>
+        );
+    }
 
     return (
         <ThemedView style={styles.container}>
@@ -142,13 +228,14 @@ export default function EditProfile({ navigation }) {
                         <View style={styles.inputWrapper}>
                             <ThemedText style={styles.inputLabel}>Email</ThemedText>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, styles.disabledInput]}
                                 placeholder="Enter your email"
                                 placeholderTextColor="#999"
                                 value={email}
                                 onChangeText={setEmail}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
+                                editable={false}
                             />
                         </View>
 
@@ -162,6 +249,21 @@ export default function EditProfile({ navigation }) {
                                 value={phoneNumber}
                                 onChangeText={setPhoneNumber}
                                 keyboardType="phone-pad"
+                            />
+                        </View>
+
+                        {/* Bio */}
+                        <View style={styles.inputWrapper}>
+                            <ThemedText style={styles.inputLabel}>Bio</ThemedText>
+                            <TextInput
+                                style={[styles.input, styles.textArea]}
+                                placeholder="Tell us about yourself"
+                                placeholderTextColor="#999"
+                                value={bio}
+                                onChangeText={setBio}
+                                multiline
+                                numberOfLines={3}
+                                textAlignVertical="top"
                             />
                         </View>
 
@@ -181,12 +283,13 @@ export default function EditProfile({ navigation }) {
                         {/* City */}
                         <View style={styles.inputWrapper}>
                             <ThemedText style={styles.inputLabel}>City</ThemedText>
-                            <TouchableOpacity style={styles.selectInput}>
-                                <ThemedText style={city ? styles.selectText : styles.selectPlaceholder}>
-                                    {city || "Select your City"}
-                                </ThemedText>
-                                <Ionicons name="chevron-down" size={20} color="#999" />
-                            </TouchableOpacity>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Enter your city"
+                                placeholderTextColor="#999"
+                                value={city}
+                                onChangeText={setCity}
+                            />
                         </View>
 
                         {/* My Interests */}
@@ -220,9 +323,9 @@ export default function EditProfile({ navigation }) {
                         </View>
                     </View>
 
-                    {/* Save Button with GradientButton */}
+                    {/* Save Button */}
                     <GradientButton
-                        title="Save & Changes"
+                        title="Save Changes"
                         onPress={handleSaveChanges}
                         loading={loading}
                         variant="PRIMARY"
@@ -245,6 +348,10 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: '#FFFFFF',
+    },
+    centerContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     header: {
         flexDirection: 'row',
@@ -322,26 +429,13 @@ const styles = StyleSheet.create({
         color: '#333',
         backgroundColor: '#fff',
     },
-    selectInput: {
-        borderWidth: 1,
-        borderColor: '#C1D0E5',
-        borderRadius: 8,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        backgroundColor: '#fff',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    selectText: {
-        fontSize: 14,
-        fontFamily: 'tenez',
-        color: '#333',
-    },
-    selectPlaceholder: {
-        fontSize: 14,
-        fontFamily: 'tenez',
+    disabledInput: {
+        backgroundColor: '#F5F5F5',
         color: '#999',
+    },
+    textArea: {
+        minHeight: 80,
+        textAlignVertical: 'top',
     },
     interestDescription: {
         fontSize: 12,
@@ -375,9 +469,8 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
     },
     saveButton: {
-        // marginHorizontal: 16,
         marginTop: 30,
         marginBottom: 20,
-        paddingHorizontal : 16
+        paddingHorizontal: 16,
     },
 });
