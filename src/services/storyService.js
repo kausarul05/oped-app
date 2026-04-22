@@ -30,12 +30,12 @@ const storyService = {
         try {
             const token = await AsyncStorage.getItem('authToken');
             const params = { page, limit };
-            
+
             // Only add category if it's provided and not 'all'
             if (category && category !== 'all' && category !== 'All') {
                 params.category = category;
             }
-            
+
             const response = await api.get('/api/v1/explore/top-stories', {
                 params: params,
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -122,6 +122,28 @@ const storyService = {
                 console.error('Error setting up request:', error.message);
                 return { success: false, error: error.message };
             }
+        }
+    },
+
+    // Submit story to editor for review
+    submitToEditor: async (storyId) => {
+        try {
+            const token = await AsyncStorage.getItem('authToken');
+            const response = await api.patch(`/api/v1/story/writer/submit/${storyId}`, {}, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
+
+            if (response.data && response.data.success) {
+                return {
+                    success: true,
+                    message: response.data.message,
+                    data: response.data.data
+                };
+            }
+            return { success: false, error: response.data?.message || 'Failed to submit to editor' };
+        } catch (error) {
+            console.error('Submit to editor error:', error);
+            return { success: false, error: error.response?.data?.message || error.message };
         }
     },
 

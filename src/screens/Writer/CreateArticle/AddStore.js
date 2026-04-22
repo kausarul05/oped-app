@@ -8,6 +8,7 @@ import {
     Alert,
     Image,
     KeyboardAvoidingView,
+    Modal,
     Platform,
     ScrollView,
     StyleSheet,
@@ -30,6 +31,7 @@ export default function AddStory({ navigation }) {
     const [tags, setTags] = useState('');
     const [isPremium, setIsPremium] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [menuVisible, setMenuVisible] = useState(false);
 
     const categories = [
         { label: 'Technology', value: 'technology' },
@@ -61,8 +63,58 @@ export default function AddStory({ navigation }) {
         }
     };
 
-    const handlePublish = async () => {
-        // Validation
+    const handleSaveAsDraft = async () => {
+        if (!title.trim()) {
+            Alert.alert('Error', 'Please enter a title');
+            return;
+        }
+        if (!summary.trim()) {
+            Alert.alert('Error', 'Please enter a summary');
+            return;
+        }
+        if (!selectedImage) {
+            Alert.alert('Error', 'Please upload a cover image');
+            return;
+        }
+
+        setLoading(true);
+        setMenuVisible(false);
+
+        try {
+            const formData = new FormData();
+            
+            formData.append('title', title.trim());
+            formData.append('summary', summary.trim());
+            formData.append('content', storyContent.trim() || '');
+            formData.append('category', category);
+            formData.append('isPremium', isPremium);
+            
+            const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+            formData.append('tags', JSON.stringify(tagsArray));
+            
+            formData.append('coverImage', {
+                uri: selectedImage.uri,
+                type: selectedImage.mimeType || 'image/jpeg',
+                name: selectedImage.fileName || 'cover.jpg',
+            });
+
+            const result = await storyService.createStory(formData);
+            
+            if (result.success) {
+                Alert.alert('Success', 'Story saved as draft!');
+                navigation.goBack();
+            } else {
+                Alert.alert('Error', result.error || 'Failed to save draft');
+            }
+        } catch (error) {
+            console.error('Error saving draft:', error);
+            Alert.alert('Error', 'Failed to save draft. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSendToEditor = async () => {
         if (!title.trim()) {
             Alert.alert('Error', 'Please enter a title');
             return;
@@ -81,111 +133,56 @@ export default function AddStory({ navigation }) {
         }
 
         setLoading(true);
+        setMenuVisible(false);
 
         try {
-            // Create FormData
             const formData = new FormData();
             
-            // Append text fields
             formData.append('title', title.trim());
             formData.append('summary', summary.trim());
             formData.append('content', storyContent.trim());
             formData.append('category', category);
             formData.append('isPremium', isPremium);
             
-            // Append tags as JSON string
             const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
             formData.append('tags', JSON.stringify(tagsArray));
             
-            // Append cover image
             formData.append('coverImage', {
                 uri: selectedImage.uri,
                 type: selectedImage.mimeType || 'image/jpeg',
                 name: selectedImage.fileName || 'cover.jpg',
             });
 
-            const result = await storyService.createStory(formData);
+            const createResult = await storyService.createStory(formData);
             
-            if (result.success) {
-                Alert.alert('Success', 'Story sent to editor successfully!');
-                navigation.goBack();
+            if (createResult.success && createResult.data?.data?._id) {
+                const newStoryId = createResult.data.data._id;
+                
+                const submitResult = await storyService.submitToEditor(newStoryId);
+                
+                if (submitResult.success) {
+                    Alert.alert('Success', 'Story submitted to editor for review!');
+                    navigation.goBack();
+                } else {
+                    Alert.alert('Error', submitResult.error || 'Failed to submit to editor');
+                }
             } else {
-                Alert.alert('Error', result.error || 'Failed to publish story');
+                Alert.alert('Error', createResult.error || 'Failed to create story');
             }
         } catch (error) {
-            console.error('Error publishing story:', error);
-            Alert.alert('Error', 'Failed to publish story. Please try again.');
+            console.error('Error submitting story:', error);
+            Alert.alert('Error', 'Failed to submit story. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
-    const insertImage = () => {
-        Alert.prompt(
-            'Insert Image',
-            'Enter the image URL',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Insert',
-                    onPress: (url) => {
-                        if (url && richText.current) {
-                            richText.current.insertImage(url);
-                        }
-                    }
-                }
-            ],
-            'plain-text',
-            'https://'
-        );
-    };
-
-    const insertLink = () => {
-        Alert.prompt(
-            'Insert Link',
-            'Enter the URL',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Insert',
-                    onPress: (url) => {
-                        if (url && richText.current) {
-                            Alert.prompt(
-                                'Link Text',
-                                'Enter the text for the link',
-                                [
-                                    { text: 'Cancel', style: 'cancel' },
-                                    {
-                                        text: 'Insert',
-                                        onPress: (text) => {
-                                            if (text) {
-                                                richText.current.insertLink(text, url);
-                                            }
-                                        }
-                                    }
-                                ],
-                                'plain-text',
-                                'Link Text'
-                            );
-                        }
-                    }
-                }
-            ],
-            'plain-text',
-            'https://'
-        );
-    };
-
-    const handleHeading1 = () => {
-        richText.current?.insertHTML('<h1>Heading 1</h1>');
-    };
-
-    const handleHeading2 = () => {
-        richText.current?.insertHTML('<h2>Heading 2</h2>');
-    };
-
-    const handleHeading3 = () => {
-        richText.current?.insertHTML('<h3>Heading 3</h3>');
+    const handleMenuOption = (option) => {
+        if (option === 'draft') {
+            handleSaveAsDraft();
+        } else if (option === 'sendToEditor') {
+            handleSendToEditor();
+        }
     };
 
     return (
@@ -198,15 +195,10 @@ export default function AddStory({ navigation }) {
                     </TouchableOpacity>
                     <ThemedText style={styles.headerTitle}>Add Story</ThemedText>
                     <TouchableOpacity
-                        style={styles.publishButton}
-                        onPress={handlePublish}
-                        disabled={loading}
+                        style={styles.menuButton}
+                        onPress={() => setMenuVisible(true)}
                     >
-                        {loading ? (
-                            <ActivityIndicator size="small" color="#FFFFFF" />
-                        ) : (
-                            <ThemedText style={styles.publishText}>Send To Editor</ThemedText>
-                        )}
+                        <Ionicons name="ellipsis-horizontal" size={24} color="#000" />
                     </TouchableOpacity>
                 </View>
 
@@ -217,6 +209,7 @@ export default function AddStory({ navigation }) {
                     <ScrollView
                         showsVerticalScrollIndicator={false}
                         contentContainerStyle={styles.scrollContent}
+                        keyboardShouldPersistTaps="handled"
                     >
                         {/* Upload Image Section */}
                         <View style={styles.section}>
@@ -315,25 +308,43 @@ export default function AddStory({ navigation }) {
                             </ThemedText>
                         </View>
 
-                        {/* Premium Section */}
-                        {/* <View style={styles.section}>
-                            <View style={styles.premiumContainer}>
-                                <ThemedText style={styles.sectionTitle}>Premium Content</ThemedText>
-                                <Switch
-                                    value={isPremium}
-                                    onValueChange={setIsPremium}
-                                    trackColor={{ false: '#E0E0E0', true: '#4B59B3' }}
-                                    thumbColor={isPremium ? '#FFFFFF' : '#FFFFFF'}
-                                />
-                            </View>
-                            <ThemedText style={styles.uploadHint}>
-                                Enable if this story is for premium users only
-                            </ThemedText>
-                        </View> */}
-
-                        {/* Rich Text Editor - Full Featured */}
+                        {/* Rich Text Editor */}
                         <View style={styles.section}>
                             <ThemedText style={styles.sectionTitle}>Tell your story *</ThemedText>
+
+                            {/* Rich Toolbar */}
+                            <RichToolbar
+                                style={styles.richToolbar}
+                                editor={richText}
+                                actions={[
+                                    actions.setBold,
+                                    actions.setItalic,
+                                    actions.setUnderline,
+                                    actions.setStrikethrough,
+                                    actions.insertBulletsList,
+                                    actions.insertOrderedList,
+                                    actions.insertLink,
+                                    actions.setParagraph,
+                                    actions.removeFormat,
+                                    actions.undo,
+                                    actions.redo,
+                                ]}
+                                iconMap={{
+                                    [actions.setBold]: ({ tintColor }) => <Ionicons name="bold" size={20} color={tintColor} />,
+                                    [actions.setItalic]: ({ tintColor }) => <Ionicons name="italic" size={20} color={tintColor} />,
+                                    [actions.setUnderline]: ({ tintColor }) => <Ionicons name="underline" size={20} color={tintColor} />,
+                                    [actions.setStrikethrough]: ({ tintColor }) => <Ionicons name="strikethrough" size={20} color={tintColor} />,
+                                    [actions.insertBulletsList]: ({ tintColor }) => <Ionicons name="list" size={20} color={tintColor} />,
+                                    [actions.insertOrderedList]: ({ tintColor }) => <Ionicons name="list" size={20} color={tintColor} />,
+                                    [actions.insertLink]: ({ tintColor }) => <Ionicons name="link" size={20} color={tintColor} />,
+                                    [actions.setParagraph]: ({ tintColor }) => <Ionicons name="text" size={20} color={tintColor} />,
+                                    [actions.removeFormat]: ({ tintColor }) => <Ionicons name="remove-outline" size={20} color={tintColor} />,
+                                    [actions.undo]: ({ tintColor }) => <Ionicons name="arrow-undo-outline" size={20} color={tintColor} />,
+                                    [actions.redo]: ({ tintColor }) => <Ionicons name="arrow-redo-outline" size={20} color={tintColor} />,
+                                }}
+                                selectedIconTint="#4B59B3"
+                                iconTint="#666"
+                            />
 
                             {/* Rich Editor */}
                             <View style={styles.editorContainer}>
@@ -346,61 +357,59 @@ export default function AddStory({ navigation }) {
                                         backgroundColor: '#FFFFFF',
                                         color: '#333',
                                         placeholderColor: '#999',
-                                        contentCSSText: 'font-size: 16px; line-height: 24px; font-family: "tenez";',
+                                        contentCSSText: 'font-size: 16px; line-height: 24px;',
                                     }}
+                                    initialContentHTML={storyContent}
                                     useContainer={true}
                                     androidHardwareAccelerationDisabled={true}
                                 />
                             </View>
                         </View>
                     </ScrollView>
-
-                    {/* Rich Toolbar - All Features */}
-                    <RichToolbar
-                        style={styles.richToolbar}
-                        editor={richText}
-                        actions={[
-                            actions.setBold,
-                            actions.setItalic,
-                            actions.setUnderline,
-                            actions.setStrikethrough,
-                            actions.insertBulletsList,
-                            actions.insertOrderedList,
-                            actions.insertLink,
-                            actions.setSubscript,
-                            actions.setSuperscript,
-                            actions.setParagraph,
-                            actions.removeFormat,
-                            actions.undo,
-                            actions.redo,
-                        ]}
-                        iconMap={{
-                            [actions.setBold]: ({ tintColor }) => <Ionicons name="bold" size={20} color={tintColor} />,
-                            [actions.setItalic]: ({ tintColor }) => <Ionicons name="italic" size={20} color={tintColor} />,
-                            [actions.setUnderline]: ({ tintColor }) => <Ionicons name="underline" size={20} color={tintColor} />,
-                            [actions.insertBulletsList]: ({ tintColor }) => <Ionicons name="list" size={20} color={tintColor} />,
-                            [actions.insertOrderedList]: ({ tintColor }) => <Ionicons name="list" size={20} color={tintColor} />,
-                            [actions.insertLink]: ({ tintColor }) => <Ionicons name="link" size={20} color={tintColor} />,
-                        }}
-                    />
-
-                    {/* Custom Heading Row */}
-                    <View style={styles.headingRow}>
-                        <TouchableOpacity style={styles.headingButton} onPress={handleHeading1}>
-                            <ThemedText style={styles.headingButtonText}>H1</ThemedText>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.headingButton} onPress={handleHeading2}>
-                            <ThemedText style={styles.headingButtonText}>H2</ThemedText>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.headingButton} onPress={handleHeading3}>
-                            <ThemedText style={styles.headingButtonText}>H3</ThemedText>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.imageButton} onPress={insertImage}>
-                            <Ionicons name="image-outline" size={20} color="#4B59B3" />
-                            <ThemedText style={styles.imageButtonText}>Add Image</ThemedText>
-                        </TouchableOpacity>
-                    </View>
                 </KeyboardAvoidingView>
+
+                {/* Three Dot Menu Modal */}
+                <Modal
+                    visible={menuVisible}
+                    transparent={true}
+                    animationType="fade"
+                    onRequestClose={() => setMenuVisible(false)}
+                >
+                    <TouchableOpacity
+                        style={styles.modalOverlay}
+                        activeOpacity={1}
+                        onPress={() => setMenuVisible(false)}
+                    >
+                        <View style={styles.menuContainer}>
+                            <TouchableOpacity
+                                style={styles.menuItem}
+                                onPress={() => handleMenuOption('draft')}
+                                disabled={loading}
+                            >
+                                <Ionicons name="document-text-outline" size={20} color="#000" />
+                                <ThemedText style={styles.menuText}>Save as Draft</ThemedText>
+                            </TouchableOpacity>
+
+                            <View style={styles.menuDivider} />
+
+                            <TouchableOpacity
+                                style={styles.menuItem}
+                                onPress={() => handleMenuOption('sendToEditor')}
+                                disabled={loading}
+                            >
+                                <Ionicons name="send-outline" size={20} color="#000" />
+                                <ThemedText style={styles.menuText}>Send to Editor</ThemedText>
+                            </TouchableOpacity>
+                        </View>
+                    </TouchableOpacity>
+                </Modal>
+
+                {/* Loading Overlay */}
+                {loading && (
+                    <View style={styles.loadingOverlay}>
+                        <ActivityIndicator size="large" color="#4B59B3" />
+                    </View>
+                )}
             </SafeAreaView>
         </ThemedView>
     );
@@ -437,18 +446,11 @@ const styles = StyleSheet.create({
         color: '#000',
         letterSpacing: 1
     },
-    publishButton: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        backgroundColor: '#4B59B3',
-        borderRadius: 20,
-        minWidth: 100,
+    menuButton: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
         alignItems: 'center',
-    },
-    publishText: {
-        fontSize: 14,
-        fontFamily: 'CoFoRaffineBold',
-        color: '#FFFFFF',
     },
     scrollContent: {
         paddingHorizontal: 16,
@@ -563,15 +565,20 @@ const styles = StyleSheet.create({
     categoryTextActive: {
         color: '#FFFFFF',
     },
-    premiumContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+    richToolbar: {
+        backgroundColor: '#F8F9FA',
+        borderTopLeftRadius: 8,
+        borderTopRightRadius: 8,
+        borderWidth: 1,
+        borderBottomWidth: 0,
+        borderColor: '#E0E0E0',
+        padding: 4,
     },
     editorContainer: {
         borderWidth: 1,
         borderColor: '#E0E0E0',
-        borderRadius: 8,
+        borderBottomLeftRadius: 8,
+        borderBottomRightRadius: 8,
         backgroundColor: '#FFFFFF',
         minHeight: 250,
         overflow: 'hidden',
@@ -580,50 +587,41 @@ const styles = StyleSheet.create({
         flex: 1,
         minHeight: 250,
     },
-    richToolbar: {
-        backgroundColor: '#F8F9FA',
-        borderTopWidth: 1,
-        borderTopColor: '#F0F0F0',
-        padding: 4,
-    },
-    headingRow: {
-        flexDirection: 'row',
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        backgroundColor: '#F8F9FA',
-        borderTopWidth: 1,
-        borderTopColor: '#F0F0F0',
-        gap: 8,
     },
-    headingButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+    menuContainer: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 4,
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
+        borderRadius: 12,
+        padding: 8,
+        width: 200,
     },
-    headingButtonText: {
-        fontSize: 14,
-        fontFamily: 'CoFoRaffineBold',
-        color: '#666',
-    },
-    imageButton: {
+    menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        backgroundColor: '#F0F3FF',
-        borderRadius: 4,
-        borderWidth: 1,
-        borderColor: '#4B59B3',
-        gap: 4,
-        marginLeft: 'auto',
+        padding: 14,
+        gap: 12,
     },
-    imageButtonText: {
-        fontSize: 14,
+    menuText: {
+        fontSize: 16,
         fontFamily: 'CoFoRaffineMedium',
-        color: '#4B59B3',
+        color: '#000',
+    },
+    menuDivider: {
+        height: 1,
+        backgroundColor: '#F0F0F0',
+    },
+    loadingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });

@@ -8,6 +8,7 @@ import {
     ActivityIndicator,
     Alert,
     Image,
+    Modal,
     ScrollView,
     StyleSheet,
     TextInput,
@@ -29,6 +30,7 @@ export default function AddPodcast({ navigation }) {
     const [audioDuration, setAudioDuration] = useState('');
     const [isPremium, setIsPremium] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [menuVisible, setMenuVisible] = useState(false);
 
     const categories = [
         { label: 'Politics', value: 'politics' },
@@ -79,12 +81,7 @@ export default function AddPodcast({ navigation }) {
         }
     };
 
-    const handlePublish = async () => {
-        // Validation
-        // if (!audioFile) {
-        //     Alert.alert('Error', 'Please upload an audio file');
-        //     return;
-        // }
+    const handleSaveAsDraft = async () => {
         if (!coverImage) {
             Alert.alert('Error', 'Please upload a cover image');
             return;
@@ -107,12 +104,11 @@ export default function AddPodcast({ navigation }) {
         }
 
         setLoading(true);
+        setMenuVisible(false);
 
         try {
-            // Create FormData
             const formData = new FormData();
             
-            // Append text fields
             formData.append('title', title.trim());
             formData.append('summary', summary.trim());
             formData.append('aboutEpisode', episodeDescription.trim());
@@ -120,18 +116,17 @@ export default function AddPodcast({ navigation }) {
             formData.append('category', category);
             formData.append('isPremium', isPremium);
             
-            // Append tags as JSON string
-            const tagsArray = tags.split(',').map(tag => tag.trim());
+            const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
             formData.append('tags', JSON.stringify(tagsArray));
             
-            // Append audio file
-            formData.append('audioFile', {
-                uri: audioFile.uri,
-                type: audioFile.mimeType || 'audio/mpeg',
-                name: audioFile.name || 'audio.mp3',
-            });
+            if (audioFile) {
+                formData.append('audioFile', {
+                    uri: audioFile.uri,
+                    type: audioFile.mimeType || 'audio/mpeg',
+                    name: audioFile.name || 'audio.mp3',
+                });
+            }
             
-            // Append cover image
             formData.append('coverImage', {
                 uri: coverImage.uri,
                 type: coverImage.mimeType || 'image/jpeg',
@@ -141,16 +136,102 @@ export default function AddPodcast({ navigation }) {
             const result = await podcastService.createPodcast(formData);
             
             if (result.success) {
-                Alert.alert('Success', 'Podcast published successfully!');
+                Alert.alert('Success', 'Podcast saved as draft!');
                 navigation.goBack();
             } else {
-                Alert.alert('Error', result.error || 'Failed to publish podcast');
+                Alert.alert('Error', result.error || 'Failed to save draft');
             }
         } catch (error) {
-            console.error('Error publishing podcast:', error);
-            Alert.alert('Error', 'Failed to publish podcast. Please try again.');
+            console.error('Error saving draft:', error);
+            Alert.alert('Error', 'Failed to save draft. Please try again.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSendToEditor = async () => {
+        if (!audioFile) {
+            Alert.alert('Error', 'Please upload an audio file');
+            return;
+        }
+        if (!coverImage) {
+            Alert.alert('Error', 'Please upload a cover image');
+            return;
+        }
+        if (!title.trim()) {
+            Alert.alert('Error', 'Please enter a title');
+            return;
+        }
+        if (!summary.trim()) {
+            Alert.alert('Error', 'Please enter a summary');
+            return;
+        }
+        if (!episodeDescription.trim()) {
+            Alert.alert('Error', 'Please enter episode description');
+            return;
+        }
+        if (!audioDuration.trim()) {
+            Alert.alert('Error', 'Please enter audio duration');
+            return;
+        }
+
+        setLoading(true);
+        setMenuVisible(false);
+
+        try {
+            const formData = new FormData();
+            
+            formData.append('title', title.trim());
+            formData.append('summary', summary.trim());
+            formData.append('aboutEpisode', episodeDescription.trim());
+            formData.append('audioDuration', parseInt(audioDuration));
+            formData.append('category', category);
+            formData.append('isPremium', isPremium);
+            
+            const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+            formData.append('tags', JSON.stringify(tagsArray));
+            
+            formData.append('audioFile', {
+                uri: audioFile.uri,
+                type: audioFile.mimeType || 'audio/mpeg',
+                name: audioFile.name || 'audio.mp3',
+            });
+            
+            formData.append('coverImage', {
+                uri: coverImage.uri,
+                type: coverImage.mimeType || 'image/jpeg',
+                name: coverImage.fileName || 'cover.jpg',
+            });
+
+            const createResult = await podcastService.createPodcast(formData);
+            
+            if (createResult.success && createResult.data?.data?._id) {
+                const newPodcastId = createResult.data.data._id;
+                
+                const submitResult = await podcastService.submitToEditor(newPodcastId);
+                
+                if (submitResult.success) {
+                    Alert.alert('Success', 'Podcast submitted to editor for review!');
+                    navigation.goBack();
+                } else {
+                    Alert.alert('Error', submitResult.error || 'Failed to submit to editor');
+                }
+            } else {
+                Alert.alert('Error', createResult.error || 'Failed to create podcast');
+            }
+        } catch (error) {
+            console.error('Error submitting podcast:', error);
+            Alert.alert('Error', 'Failed to submit podcast. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleMenuOption = (option) => {
+        if (option === 'draft') {
+            handleSaveAsDraft();
+        } else if (option === 'sendToEditor') {
+            handleSendToEditor();
         }
     };
 
@@ -164,15 +245,10 @@ export default function AddPodcast({ navigation }) {
                     </TouchableOpacity>
                     <ThemedText style={styles.headerTitle}>Add Podcast</ThemedText>
                     <TouchableOpacity
-                        style={styles.publishButton}
-                        onPress={handlePublish}
-                        disabled={loading}
+                        style={styles.menuButton}
+                        onPress={() => setMenuVisible(true)}
                     >
-                        {loading ? (
-                            <ActivityIndicator size="small" color="#FFFFFF" />
-                        ) : (
-                            <ThemedText style={styles.publishText}>Send to Editor</ThemedText>
-                        )}
+                        <Ionicons name="ellipsis-horizontal" size={24} color="#000" />
                     </TouchableOpacity>
                 </View>
 
@@ -182,7 +258,7 @@ export default function AddPodcast({ navigation }) {
                 >
                     {/* Upload Audio File Section */}
                     <View style={styles.section}>
-                        <ThemedText style={styles.sectionTitle}>Upload Audio File *</ThemedText>
+                        <ThemedText style={styles.sectionTitle}>Upload Audio File {!audioFile && '*'}</ThemedText>
 
                         <TouchableOpacity
                             style={styles.uploadBox}
@@ -332,23 +408,50 @@ export default function AddPodcast({ navigation }) {
                             Separate multiple tags with commas
                         </ThemedText>
                     </View>
-
-                    {/* Premium Section */}
-                    {/* <View style={styles.section}>
-                        <View style={styles.premiumContainer}>
-                            <ThemedText style={styles.sectionTitle}>Premium Content</ThemedText>
-                            <Switch
-                                value={isPremium}
-                                onValueChange={setIsPremium}
-                                trackColor={{ false: '#E0E0E0', true: '#4B59B3' }}
-                                thumbColor={isPremium ? '#FFFFFF' : '#FFFFFF'}
-                            />
-                        </View>
-                        <ThemedText style={styles.uploadHint}>
-                            Enable if this podcast is for premium users only
-                        </ThemedText>
-                    </View> */}
                 </ScrollView>
+
+                {/* Three Dot Menu Modal */}
+                <Modal
+                    visible={menuVisible}
+                    transparent={true}
+                    animationType="fade"
+                    onRequestClose={() => setMenuVisible(false)}
+                >
+                    <TouchableOpacity
+                        style={styles.modalOverlay}
+                        activeOpacity={1}
+                        onPress={() => setMenuVisible(false)}
+                    >
+                        <View style={styles.menuContainer}>
+                            <TouchableOpacity
+                                style={styles.menuItem}
+                                onPress={() => handleMenuOption('draft')}
+                                disabled={loading}
+                            >
+                                <Ionicons name="document-text-outline" size={20} color="#000" />
+                                <ThemedText style={styles.menuText}>Save as Draft</ThemedText>
+                            </TouchableOpacity>
+
+                            <View style={styles.menuDivider} />
+
+                            <TouchableOpacity
+                                style={styles.menuItem}
+                                onPress={() => handleMenuOption('sendToEditor')}
+                                disabled={loading}
+                            >
+                                <Ionicons name="send-outline" size={20} color="#000" />
+                                <ThemedText style={styles.menuText}>Send to Editor</ThemedText>
+                            </TouchableOpacity>
+                        </View>
+                    </TouchableOpacity>
+                </Modal>
+
+                {/* Loading Overlay */}
+                {loading && (
+                    <View style={styles.loadingOverlay}>
+                        <ActivityIndicator size="large" color="#4B59B3" />
+                    </View>
+                )}
             </SafeAreaView>
         </ThemedView>
     );
@@ -385,18 +488,11 @@ const styles = StyleSheet.create({
         color: '#000',
         letterSpacing: 1
     },
-    publishButton: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        backgroundColor: '#4B59B3',
-        borderRadius: 20,
-        minWidth: 80,
+    menuButton: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
         alignItems: 'center',
-    },
-    publishText: {
-        fontSize: 14,
-        fontFamily: 'CoFoRaffineBold',
-        color: '#FFFFFF',
     },
     scrollContent: {
         paddingHorizontal: 16,
@@ -536,9 +632,41 @@ const styles = StyleSheet.create({
     categoryTextActive: {
         color: '#FFFFFF',
     },
-    premiumContainer: {
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    menuContainer: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 8,
+        width: 200,
+    },
+    menuItem: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 14,
+        gap: 12,
+    },
+    menuText: {
+        fontSize: 16,
+        fontFamily: 'CoFoRaffineMedium',
+        color: '#000',
+    },
+    menuDivider: {
+        height: 1,
+        backgroundColor: '#F0F0F0',
+    },
+    loadingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        justifyContent: 'center',
         alignItems: 'center',
     },
 });

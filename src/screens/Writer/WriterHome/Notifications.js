@@ -37,14 +37,14 @@ export default function Notifications({ navigation }) {
 
             const result = await notificationService.getNotifications(page, 10);
 
-            console.log("result", result)
+            // console.log("result", result.data)
 
             if (result.success) {
                 const formattedNotifications = result.data.map(notification => ({
                     id: notification._id,
                     type: notification.type || 'general',
                     title: notification.title,
-                    description: notification.body,
+                    description: notification.message,
                     time: formatTimeAgo(notification.createdAt),
                     createdAt: notification.createdAt,
                     isRead: notification.isRead || false,
@@ -58,7 +58,7 @@ export default function Notifications({ navigation }) {
                 }
 
                 setUnreadCount(result.unreadCount || 0);
-                
+
                 if (result.pagination) {
                     setPagination(result.pagination);
                 }
@@ -76,7 +76,7 @@ export default function Notifications({ navigation }) {
         const date = new Date(dateString);
         const now = new Date();
         const diffInSeconds = Math.floor((now - date) / 1000);
-        
+
         if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
         if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
         if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
@@ -98,7 +98,7 @@ export default function Notifications({ navigation }) {
         try {
             const result = await notificationService.markAsRead(notificationId);
             if (result.success) {
-                setNotifications(prev => prev.map(notif => 
+                setNotifications(prev => prev.map(notif =>
                     notif.id === notificationId ? { ...notif, isRead: true } : notif
                 ));
                 setUnreadCount(prev => Math.max(0, prev - 1));
@@ -172,7 +172,7 @@ export default function Notifications({ navigation }) {
         if (!item.isRead) {
             await handleMarkAsRead(item.id);
         }
-        
+
         // Navigate based on notification type and metadata
         if (item.metadata) {
             const { contentType, contentId } = item.metadata;
@@ -187,7 +187,7 @@ export default function Notifications({ navigation }) {
     };
 
     const getIconForType = (type) => {
-        switch(type) {
+        switch (type) {
             case 'story':
             case 'article':
                 return 'document-text-outline';
@@ -204,37 +204,42 @@ export default function Notifications({ navigation }) {
         }
     };
 
-    const renderNotificationItem = ({ item }) => (
-        <TouchableOpacity 
-            style={[styles.notificationItem, !item.isRead && styles.unreadNotification]}
-            onPress={() => handleNotificationPress(item)}
-            onLongPress={() => handleDeleteNotification(item.id)}
-            activeOpacity={0.7}
-        >
-            <View style={styles.iconContainer}>
-                <Ionicons name={getIconForType(item.type)} size={24} color="#4B59B3" />
-            </View>
-            
-            <View style={styles.notificationContent}>
-                <ThemedText style={styles.notificationTitle}>{item.title}</ThemedText>
-                {item.description ? (
-                    <ThemedText style={styles.notificationDescription} numberOfLines={2}>
-                        {item.description}
-                    </ThemedText>
-                ) : null}
-                <ThemedText style={styles.notificationTime}>{item.time}</ThemedText>
-            </View>
+    const renderNotificationItem = ({ item }) => {
+        console.log("item", item)
+        return (
+            (
+                <TouchableOpacity
+                    style={[styles.notificationItem, !item.isRead && styles.unreadNotification]}
+                    onPress={() => handleNotificationPress(item)}
+                    onLongPress={() => handleDeleteNotification(item.id)}
+                    activeOpacity={0.7}
+                >
+                    <View style={styles.iconContainer}>
+                        <Ionicons name={getIconForType(item.type)} size={24} color="#4B59B3" />
+                    </View>
 
-            {!item.isRead && <View style={styles.newDot} />}
-            
-            <TouchableOpacity 
-                style={styles.deleteButton}
-                onPress={() => handleDeleteNotification(item.id)}
-            >
-                <Ionicons name="close" size={18} color="#999" />
-            </TouchableOpacity>
-        </TouchableOpacity>
-    );
+                    <View style={styles.notificationContent}>
+                        <ThemedText style={styles.notificationTitle}>{item.message}</ThemedText>
+                        {item.description ? (
+                            <ThemedText style={styles.notificationDescription} numberOfLines={2}>
+                                {item.description}
+                            </ThemedText>
+                        ) : null}
+                        <ThemedText style={styles.notificationTime}>{item.time}</ThemedText>
+                    </View>
+
+                    {!item.isRead && <View style={styles.newDot} />}
+
+                    <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={() => handleDeleteNotification(item.id)}
+                    >
+                        <Ionicons name="close" size={18} color="#999" />
+                    </TouchableOpacity>
+                </TouchableOpacity>
+            )
+        )
+    };
 
     const renderEmptyComponent = () => (
         <View style={styles.emptyContainer}>
@@ -268,7 +273,7 @@ export default function Notifications({ navigation }) {
                     </TouchableOpacity>
                     <ThemedText style={styles.headerTitle}>Notifications</ThemedText>
                     {unreadCount > 0 && (
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={styles.markAllButton}
                             onPress={handleMarkAllAsRead}
                         >
@@ -363,7 +368,7 @@ const styles = StyleSheet.create({
     notificationItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
+        // padding: 12,
         position: 'relative',
     },
     unreadNotification: {
@@ -383,7 +388,7 @@ const styles = StyleSheet.create({
     },
     notificationTitle: {
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '400',
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
         marginBottom: 2,
@@ -409,8 +414,8 @@ const styles = StyleSheet.create({
         borderRadius: 4,
         backgroundColor: '#4B59B3',
         position: 'absolute',
-        right: 40,
-        top: 20,
+        left: 10,
+        top: 10,
     },
     deleteButton: {
         padding: 8,

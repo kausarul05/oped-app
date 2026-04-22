@@ -134,6 +134,28 @@ const podcastService = {
             return { success: false, data: [], error: error.message };
         }
     },
+
+    // Submit podcast to editor for review
+    submitToEditor: async (podcastId) => {
+        try {
+            const token = await AsyncStorage.getItem('authToken');
+            const response = await api.patch(`/api/v1/podcast/writer/submit/${podcastId}`, {}, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
+
+            if (response.data && response.data.success) {
+                return {
+                    success: true,
+                    message: response.data.message,
+                    data: response.data.data
+                };
+            }
+            return { success: false, error: response.data?.message || 'Failed to submit to editor' };
+        } catch (error) {
+            console.error('Submit to editor error:', error);
+            return { success: false, error: error.response?.data?.message || error.message };
+        }
+    },
 };
 
 export default podcastService;
