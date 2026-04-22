@@ -5,15 +5,14 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Image,
     ScrollView,
     StyleSheet,
     TextInput,
     TouchableOpacity,
-    View,
-    ActivityIndicator,
-    Switch
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import podcastService from '../../../services/podcastService';
@@ -172,7 +171,7 @@ export default function AddPodcast({ navigation }) {
                         {loading ? (
                             <ActivityIndicator size="small" color="#FFFFFF" />
                         ) : (
-                            <ThemedText style={styles.publishText}>Publish</ThemedText>
+                            <ThemedText style={styles.publishText}>Send to Editor</ThemedText>
                         )}
                     </TouchableOpacity>
                 </View>
@@ -335,7 +334,7 @@ export default function AddPodcast({ navigation }) {
                     </View>
 
                     {/* Premium Section */}
-                    <View style={styles.section}>
+                    {/* <View style={styles.section}>
                         <View style={styles.premiumContainer}>
                             <ThemedText style={styles.sectionTitle}>Premium Content</ThemedText>
                             <Switch
@@ -348,7 +347,7 @@ export default function AddPodcast({ navigation }) {
                         <ThemedText style={styles.uploadHint}>
                             Enable if this podcast is for premium users only
                         </ThemedText>
-                    </View>
+                    </View> */}
                 </ScrollView>
             </SafeAreaView>
         </ThemedView>

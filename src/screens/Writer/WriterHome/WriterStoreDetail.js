@@ -1,6 +1,6 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
-import { FontAwesome6, Foundation, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Foundation, Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import {
@@ -23,6 +23,8 @@ export default function WriterStoreDetail({ route, navigation }) {
     const { width } = useWindowDimensions();
     const { colors } = useTheme();
     const { storyId } = route.params || {};
+
+    // console.log("storyId", storyId)
 
     const [story, setStory] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -188,13 +190,14 @@ export default function WriterStoreDetail({ route, navigation }) {
 
         if (newLikedState) {
             const result = await reactionService.addReaction('story', story.id, 'like');
+            console.log("result writer story", result)
             if (!result.success) {
                 setLiked(!newLikedState);
                 setLikeCount(likeCount);
                 Alert.alert('Error', 'Failed to like the story');
             }
         } else {
-            const result = await reactionService.removeReaction('story', story.id);
+            const result = await reactionService.addReaction('story', story.id, 'like');
             if (!result.success) {
                 setLiked(!newLikedState);
                 setLikeCount(likeCount);
@@ -220,7 +223,7 @@ export default function WriterStoreDetail({ route, navigation }) {
         try {
             const shareUrl = `https://hoped.com/story/${story.id}`;
             await Share.share({
-                message: `${story.title}\n\nRead more: ${shareUrl}\n\nShared via HOPED App`,
+                message: `${shareUrl}`,
                 title: 'Share Story',
                 url: shareUrl
             });
@@ -333,7 +336,7 @@ export default function WriterStoreDetail({ route, navigation }) {
                     {/* Author Section */}
                     <TouchableOpacity
                         style={styles.authorSection}
-                        onPress={() => navigation.navigate('WriterProfile', { authorId: story.authorId })}
+                        // onPress={() => navigation.navigate('WriterProfile', { authorId: story.authorId })}
                     >
                         <Image source={{ uri: story.authorImage }} style={styles.authorImage} />
                         <View style={styles.authorInfo}>
@@ -379,7 +382,7 @@ export default function WriterStoreDetail({ route, navigation }) {
                     )}
 
                     {/* Action Buttons */}
-                    <View style={styles.actionContainer}>
+                    {/* <View style={styles.actionContainer}>
                         <TouchableOpacity style={[styles.actionButton, liked && styles.actionButtonActive]} onPress={toggleLike}>
                             <Foundation name="like" size={22} color={liked ? "#4B59B3" : "#666"} />
                             <ThemedText style={[styles.actionText, liked && { color: '#4B59B3' }]}>{likeCount}</ThemedText>
@@ -394,7 +397,7 @@ export default function WriterStoreDetail({ route, navigation }) {
                             <FontAwesome6 name="share-from-square" size={20} color="#666" />
                             <ThemedText style={styles.actionText}>{story.shares}</ThemedText>
                         </TouchableOpacity>
-                    </View>
+                    </View> */}
 
                     {/* Related Articles Section */}
                     {relatedStories.length > 0 && (

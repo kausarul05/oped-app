@@ -1,4 +1,5 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import LoginScreen from '../screens/Auth/Login';
 import AboutUs from '../screens/Reader/Inbox/Settings/AboutUs';
 import ChangePassword from '../screens/Reader/Inbox/Settings/ChangePassword';
 import EditProfile from '../screens/Reader/Inbox/Settings/EditProfile';
@@ -25,6 +26,7 @@ export default function ProfileStack() {
              <Stack.Screen name="TermsConditions" component={TermsConditions} />
              <Stack.Screen name="AboutUs" component={AboutUs} />
            <Stack.Screen name="Notifications" component={Notifications} />
+           <Stack.Screen name="login" component={LoginScreen} />
             
             {/* <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} />
             <Stack.Screen name="TermsConditions" component={TermsConditions} />

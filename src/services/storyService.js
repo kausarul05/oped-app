@@ -72,7 +72,7 @@ const storyService = {
     getWriterStoryById: async (storyId) => {
         try {
             const token = await AsyncStorage.getItem('authToken');
-            const response = await api.get(`/api/v1/story/writer/detail/${storyId}`, {
+            const response = await api.get(`/api/v1/story/writer/my-stories/${storyId}`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
             });
             return { success: true, data: response.data };

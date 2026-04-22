@@ -11,7 +11,6 @@ import {
     Platform,
     ScrollView,
     StyleSheet,
-    Switch,
     TextInput,
     TouchableOpacity,
     View
@@ -317,7 +316,7 @@ export default function AddStory({ navigation }) {
                         </View>
 
                         {/* Premium Section */}
-                        <View style={styles.section}>
+                        {/* <View style={styles.section}>
                             <View style={styles.premiumContainer}>
                                 <ThemedText style={styles.sectionTitle}>Premium Content</ThemedText>
                                 <Switch
@@ -330,7 +329,7 @@ export default function AddStory({ navigation }) {
                             <ThemedText style={styles.uploadHint}>
                                 Enable if this story is for premium users only
                             </ThemedText>
-                        </View>
+                        </View> */}
 
                         {/* Rich Text Editor - Full Featured */}
                         <View style={styles.section}>
