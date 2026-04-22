@@ -1,168 +1,111 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     FlatList,
     Image,
+    RefreshControl,
     StyleSheet,
     TouchableOpacity,
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import followService from '../../../services/followService';
 
 export default function Newsletter({ navigation }) {
     const { colors } = useTheme();
+    const [newsletters, setNewsletters] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState(null);
 
-    // Newsletter data
-    const newsletters = [
-        {
-            id: '1',
-            name: 'Eric Lach',
-            avatar: 'https://randomuser.me/api/portraits/men/2.jpg',
-            isLinked: true,
-            hasNotification: true,
-            hasMessage: false,
-            notificationCount: 3,
-        },
-        {
-            id: '2',
-            name: 'Eric Lach',
-            avatar: 'https://randomuser.me/api/portraits/men/3.jpg',
-            isLinked: true,
-            hasNotification: false,
-            hasMessage: true,
-            messageCount: 1,
-        },
-        {
-            id: '3',
-            name: 'Eric Lach',
-            avatar: 'https://randomuser.me/api/portraits/men/4.jpg',
-            isLinked: true,
-            hasNotification: true,
-            hasMessage: true,
-            notificationCount: 5,
-            messageCount: 2,
-        },
-        {
-            id: '4',
-            name: 'Eric Lach',
-            avatar: 'https://randomuser.me/api/portraits/men/5.jpg',
-            isLinked: true,
-            hasNotification: false,
-            hasMessage: false,
-        },
-        {
-            id: '5',
-            name: 'Eric Lach',
-            avatar: 'https://randomuser.me/api/portraits/men/6.jpg',
-            isLinked: true,
-            hasNotification: true,
-            hasMessage: false,
-            notificationCount: 2,
-        },
-        {
-            id: '6',
-            name: 'Eric Lach',
-            avatar: 'https://randomuser.me/api/portraits/men/7.jpg',
-            isLinked: true,
-            hasNotification: false,
-            hasMessage: true,
-            messageCount: 1,
-        },
-        {
-            id: '7',
-            name: 'Eric Lach',
-            avatar: 'https://randomuser.me/api/portraits/men/8.jpg',
-            isLinked: true,
-            hasNotification: true,
-            hasMessage: true,
-            notificationCount: 4,
-            messageCount: 3,
-        },
-        {
-            id: '8',
-            name: 'Eric Lach',
-            avatar: 'https://randomuser.me/api/portraits/men/9.jpg',
-            isLinked: true,
-            hasNotification: false,
-            hasMessage: false,
-        },
-        {
-            id: '9',
-            name: 'Eric Lach',
-            avatar: 'https://randomuser.me/api/portraits/men/10.jpg',
-            isLinked: true,
-            hasNotification: true,
-            hasMessage: false,
-            notificationCount: 1,
-        },
-        {
-            id: '10',
-            name: 'Eric Lach',
-            avatar: 'https://randomuser.me/api/portraits/men/11.jpg',
-            isLinked: true,
-            hasNotification: false,
-            hasMessage: true,
-            messageCount: 2,
-        },
-        {
-            id: '11',
-            name: 'Eric Lach',
-            avatar: 'https://randomuser.me/api/portraits/men/12.jpg',
-            isLinked: true,
-            hasNotification: true,
-            hasMessage: true,
-            notificationCount: 3,
-            messageCount: 1,
-        },
-        {
-            id: '12',
-            name: 'Eric Lach',
-            avatar: 'https://randomuser.me/api/portraits/men/13.jpg',
-            isLinked: true,
-            hasNotification: false,
-            hasMessage: false,
-        },
-    ];
+    // Get current user ID from storage
+    useEffect(() => {
+        const getCurrentUser = async () => {
+            try {
+                const userDataString = await AsyncStorage.getItem('userData');
+                if (userDataString) {
+                    const userData = JSON.parse(userDataString);
+                    let userId = null;
+                    if (userData.data?.id) {
+                        userId = userData.data.id;
+                    } else if (userData.id) {
+                        userId = userData.id;
+                    } else if (userData._id) {
+                        userId = userData._id;
+                    }
+                    setCurrentUserId(userId);
+                }
+            } catch (error) {
+                console.error('Error getting current user:', error);
+            }
+        };
+        getCurrentUser();
+    }, []);
+
+    // Fetch following list (newsletters)
+    const fetchFollowingList = async () => {
+        try {
+            const result = await followService.getFollowing(currentUserId, 1, 100);
+            
+            if (result.success && result.data) {
+                const formattedNewsletters = result.data.map(follow => ({
+                    id: follow._id,
+                    name: follow.name,
+                    avatar: follow.profileImage,
+                    bio: follow.bio,
+                    followersCount: follow.followersCount,
+                }));
+                setNewsletters(formattedNewsletters);
+            }
+        } catch (error) {
+            console.error('Error fetching following list:', error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchFollowingList();
+    };
+
+    useEffect(() => {
+        if (currentUserId) {
+            fetchFollowingList();
+        }
+    }, [currentUserId]);
 
     const renderNewsletterItem = ({ item }) => (
         <TouchableOpacity
             style={styles.newsletterItem}
-            onPress={() => console.log('Pressed:', item.name)}
+            onPress={() => navigation.navigate('AuthorProfile', { 
+                authorId: item.id,
+                // authorName: item.name,
+                // authorImage: item.avatar,
+                // authorBio: item.bio
+            })}
         >
             <Image source={{ uri: item.avatar }} style={styles.avatar} />
             <View style={styles.newsletterContent}>
                 <View style={styles.nameContainer}>
                     <ThemedText style={styles.newsletterName}>{item.name}</ThemedText>
-                    {/* {item.isLinked && (
-                        <Ionicons name="link-outline" size={16} color="#4B59B3" />
-                    )} */}
-                </View>
-
-                <View style={styles.iconContainer}>
-                    {/* {item.hasNotification && ( */}
-                    <View style={styles.iconWithBadge}>
-                        {/* <Ionicons name="notifications-outline" size={18} color="#666" /> */}
-                        {/* <View style={styles.badge}>
-                                <ThemedText style={styles.badgeText}>{item.notificationCount || 1}</ThemedText>
-                            </View> */}
-                        <Ionicons name="notifications-outline" size={24} color="#000000" />
-                    </View>
-                    {/* )} */}
-
-                    {/* {item.hasMessage && ( */}
-                    <View style={styles.iconWithBadge}>
-                        {/* <Ionicons name="chatbubble-outline" size={18} color="#666" /> */}
-                        <MaterialCommunityIcons name="message-text-outline" size={24} color="#000000" />
-                        {/* <View style={styles.badge}>
-                                <ThemedText style={styles.badgeText}>{item.messageCount || 1}</ThemedText>
-                            </View> */}
-                    </View>
-                    {/* )} */}
                 </View>
             </View>
         </TouchableOpacity>
     );
+
+    if (loading) {
+        return (
+            <ThemedView style={[styles.container, styles.centerContainer]}>
+                <ActivityIndicator size="large" color="#4B59B3" />
+            </ThemedView>
+        );
+    }
 
     return (
         <ThemedView style={styles.container}>
@@ -176,15 +119,32 @@ export default function Newsletter({ navigation }) {
                     <View style={{ width: 40 }} />
                 </View>
 
-                {/* Newsletter List - Single Column */}
-                <FlatList
-                    data={newsletters}
-                    renderItem={renderNewsletterItem}
-                    keyExtractor={(item) => item.id}
-                    numColumns={1}
-                    contentContainerStyle={styles.listContent}
-                    showsVerticalScrollIndicator={false}
-                />
+                {/* Newsletter List */}
+                {newsletters.length > 0 ? (
+                    <FlatList
+                        data={newsletters}
+                        renderItem={renderNewsletterItem}
+                        keyExtractor={(item) => item.id}
+                        numColumns={1}
+                        contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={onRefresh}
+                                colors={['#4B59B3']}
+                            />
+                        }
+                    />
+                ) : (
+                    <View style={styles.emptyContainer}>
+                        <Ionicons name="people-outline" size={64} color="#ccc" />
+                        <ThemedText style={styles.emptyText}>No newsletters yet</ThemedText>
+                        <ThemedText style={styles.emptySubText}>
+                            Follow authors to see them here
+                        </ThemedText>
+                    </View>
+                )}
             </SafeAreaView>
         </ThemedView>
     );
@@ -198,6 +158,10 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: '#FFFFFF',
+    },
+    centerContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     header: {
         flexDirection: 'row',
@@ -236,10 +200,6 @@ const styles = StyleSheet.create({
         borderColor: '#F0F0F0',
         elevation: 1,
         marginBottom: 2
-        // shadowColor: '#000',
-        // shadowOffset: { width: 0, height: 1 },
-        // shadowOpacity: 0.05,
-        // shadowRadius: 2,
     },
     avatar: {
         width: 50,
@@ -266,30 +226,22 @@ const styles = StyleSheet.create({
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
     },
-    iconContainer: {
-        flexDirection: 'row',
+    emptyContainer: {
+        flex: 1,
         alignItems: 'center',
-        gap: 16,
-    },
-    iconWithBadge: {
-        position: 'relative',
-        padding: 4,
-    },
-    badge: {
-        position: 'absolute',
-        top: -2,
-        right: -6,
-        backgroundColor: '#FF3B30',
-        borderRadius: 10,
-        minWidth: 16,
-        height: 16,
         justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 4,
+        paddingVertical: 60,
     },
-    badgeText: {
-        fontSize: 10,
+    emptyText: {
+        fontSize: 18,
         fontFamily: 'CoFoRaffineBold',
-        color: '#FFFFFF',
+        color: '#999',
+        marginTop: 16,
+    },
+    emptySubText: {
+        fontSize: 14,
+        fontFamily: 'tenez',
+        color: '#ccc',
+        marginTop: 8,
     },
 });

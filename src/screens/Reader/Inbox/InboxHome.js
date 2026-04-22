@@ -323,7 +323,7 @@ export default function InboxHome({ navigation }) {
             <View style={styles.storyContainer}>
                 <TouchableOpacity
                     activeOpacity={0.9}
-                    onPress={() => navigation.navigate('StoryDetail', { storyId: item.id })}
+                    onPress={() => navigation.navigate('StoryDetail', { postId: item.id })}
                 >
                     <View style={styles.storyHeader}>
                         <View style={styles.storyHeaderLeft}>
@@ -512,19 +512,19 @@ export default function InboxHome({ navigation }) {
                             <ThemedText style={styles.menuText}>Save Post</ThemedText>
                         </TouchableOpacity>
 
-                        <View style={styles.menuDivider} />
+                        {/* <View style={styles.menuDivider} /> */}
 
-                        <TouchableOpacity
+                        {/* <TouchableOpacity
                             style={styles.menuItem}
                             onPress={() => handleMenuOption('hide')}
                         >
                             <Ionicons name="eye-off-outline" size={20} color="#000" />
                             <ThemedText style={styles.menuText}>Hide Post</ThemedText>
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
 
-                        <View style={styles.menuDivider} />
+                        {/* <View style={styles.menuDivider} /> */}
 
-                        <TouchableOpacity
+                        {/* <TouchableOpacity
                             style={styles.menuItem}
                             onPress={() => handleMenuOption('notInterested')}
                         >
@@ -532,15 +532,15 @@ export default function InboxHome({ navigation }) {
                             <ThemedText style={styles.menuText}>Not Interested</ThemedText>
                         </TouchableOpacity>
 
-                        <View style={styles.menuDivider} />
+                        <View style={styles.menuDivider} /> */}
 
-                        <TouchableOpacity
+                        {/* <TouchableOpacity
                             style={[styles.menuItem, styles.reportItem]}
                             onPress={() => handleMenuOption('report')}
                         >
                             <Ionicons name="flag-outline" size={20} color="#FF3B30" />
                             <ThemedText style={[styles.menuText, styles.reportText]}>Report Post</ThemedText>
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
                     </View>
                 </TouchableOpacity>
             </Modal>
