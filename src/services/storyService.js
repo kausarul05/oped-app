@@ -25,6 +25,36 @@ const storyService = {
         }
     },
 
+    // Get top stories from explore API
+    getTopStories: async (category = '', page = 1, limit = 10) => {
+        try {
+            const token = await AsyncStorage.getItem('authToken');
+            const params = { page, limit };
+            
+            // Only add category if it's provided and not 'all'
+            if (category && category !== 'all' && category !== 'All') {
+                params.category = category;
+            }
+            
+            const response = await api.get('/api/v1/explore/top-stories', {
+                params: params,
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
+
+            if (response.data && response.data.success) {
+                return {
+                    success: true,
+                    data: response.data.data,
+                    pagination: response.data.pagination
+                };
+            }
+            return { success: false, data: [], error: 'No data found' };
+        } catch (error) {
+            console.error('Get top stories error:', error);
+            return { success: false, data: [], error: error.message };
+        }
+    },
+
     // Get single story by ID
     getStoryById: async (storyId) => {
         try {

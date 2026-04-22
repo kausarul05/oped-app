@@ -27,6 +27,8 @@ export default function StoryDetail({ route, navigation }) {
     const { colors } = useTheme();
     const { postId } = route.params || {};
 
+    // console.log("popst id", postId)
+
     const [liked, setLiked] = useState(false);
     const [bookmarked, setBookmarked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);

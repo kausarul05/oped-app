@@ -1,10 +1,13 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
+import storyService from '@/src/services/storyService';
 import { FontAwesome6, Foundation, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     FlatList,
     Image,
+    RefreshControl,
     StyleSheet,
     TextInput,
     TouchableOpacity,
@@ -15,10 +18,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function CategoryStories({ route, navigation }) {
     const { colors } = useTheme();
     const { category: initialCategory } = { category: 'All' };
-    
+
     const [selectedCategory, setSelectedCategory] = useState(initialCategory);
     const [searchQuery, setSearchQuery] = useState('');
-    const [sortBy, setSortBy] = useState('latest'); // 'latest', 'popular', 'trending'
+    const [sortBy, setSortBy] = useState('latest');
+    const [stories, setStories] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [pagination, setPagination] = useState({ total: 0, page: 1, totalPages: 1 });
 
     // Categories from QuickLinks and Discover
     const categories = [
@@ -34,178 +41,199 @@ export default function CategoryStories({ route, navigation }) {
         { id: 10, name: 'Business', icon: 'briefcase-outline', color: '#A8E6CF' },
     ];
 
-    // Mock stories data with categories
-    const allStories = [
-        {
-            id: '1',
-            title: 'Manchester United',
-            headline: 'The Future of Digital Media and the Changing Voice of Independent Journalism...',
-            description: 'As technology evolves and reader habits shift, independent platforms are redefining how stories are told...',
-            image: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            category: 'LIVE',
-            timeAgo: '2 hours ago',
-            likes: '3.5k',
-            comments: '45k',
-            shares: '150',
-            readTime: '5 min',
-        },
-        {
-            id: '2',
-            title: 'Digital Revolution',
-            headline: 'How AI is Transforming the Way We Consume News and Information',
-            description: 'Artificial intelligence is reshaping journalism, bringing personalized content and real-time updates...',
-            image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            category: 'Top Stories',
-            timeAgo: '5 hours ago',
-            likes: '2.1k',
-            comments: '32k',
-            shares: '89',
-            readTime: '4 min',
-        },
-        {
-            id: '3',
-            title: 'Global Economy',
-            headline: 'Markets React to Changing Political Landscapes Across Europe and Asia',
-            description: 'Investors are watching closely as economic indicators shift and new policies take shape...',
-            image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            category: 'Finance',
-            timeAgo: '1 day ago',
-            likes: '1.2k',
-            comments: '18k',
-            shares: '56',
-            readTime: '6 min',
-        },
-        {
-            id: '4',
-            title: 'Cultural Renaissance',
-            headline: 'How Local Artists Are Gaining Global Recognition Through Digital Platforms',
-            description: 'The internet has democratized art, allowing creators from remote corners to reach international audiences...',
-            image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2015&q=80',
-            category: 'Culture',
-            timeAgo: '3 days ago',
-            likes: '856',
-            comments: '12k',
-            shares: '42',
-            readTime: '7 min',
-        },
-        {
-            id: '5',
-            title: 'Tech Innovation',
-            headline: 'How Startups Are Revolutionizing the Way We Work and Live',
-            description: 'New technologies are emerging every day, changing how we interact with the world around us...',
-            image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            category: 'Bricflog',
-            timeAgo: '6 hours ago',
-            likes: '4.2k',
-            comments: '67k',
-            shares: '234',
-            readTime: '3 min',
-        },
-        {
-            id: '6',
-            title: 'Travel Destinations',
-            headline: 'Hidden Gems: Unexplored Places That Will Take Your Breath Away',
-            description: 'Discover off-the-beaten-path destinations that offer unique experiences and unforgettable memories...',
-            image: 'https://images.unsplash.com/photo-1502920917128-1aa500764b2e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            category: 'Travel',
-            timeAgo: '2 days ago',
-            likes: '3.8k',
-            comments: '42k',
-            shares: '189',
-            readTime: '8 min',
-        },
-        {
-            id: '7',
-            title: 'Political Analysis',
-            headline: 'Understanding the Shift in Global Political Dynamics',
-            description: 'Experts analyze the changing political landscape and what it means for international relations...',
-            image: 'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            category: 'Politics',
-            timeAgo: '4 hours ago',
-            likes: '2.7k',
-            comments: '38k',
-            shares: '112',
-            readTime: '10 min',
-        },
-        {
-            id: '8',
-            title: 'Business Trends',
-            headline: 'How Companies Are Adapting to the New Digital Economy',
-            description: 'From remote work to digital transformation, businesses are evolving at an unprecedented pace...',
-            image: 'https://images.unsplash.com/photo-1664575602554-2087b04935a5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-            category: 'Business',
-            timeAgo: '12 hours ago',
-            likes: '1.9k',
-            comments: '24k',
-            shares: '78',
-            readTime: '5 min',
-        },
-    ];
+    const getApiCategory = (categoryName) => {
+        const mapping = {
+            'All': '',
+            'LIVE': 'live',
+            'Top Stories': 'top-stories',
+            'Bricflog': 'bricflog',
+            'Discover': 'discover',
+            'Culture': 'culture',
+            'Travel': 'travel',
+            'Finance': 'finance',
+            'Politics': 'politics',
+            'Business': 'business',
+        };
+        return mapping[categoryName] || '';
+    };
+
+    const fetchStories = async (page = 1, isRefresh = false) => {
+        try {
+            if (isRefresh) {
+                setRefreshing(true);
+            } else if (page === 1) {
+                setLoading(true);
+            }
+
+            const apiCategory = getApiCategory(selectedCategory);
+            const response = await storyService.getTopStories(apiCategory, page, 10);
+
+            if (response.success) {
+                let newStories = response.data;
+
+                // Apply search filter
+                if (searchQuery.trim()) {
+                    newStories = newStories.filter(story =>
+                        story.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        story.summary?.toLowerCase().includes(searchQuery.toLowerCase())
+                    );
+                }
+
+                // Apply sorting
+                if (sortBy === 'popular') {
+                    newStories = [...newStories].sort((a, b) => (b.reactionCount || 0) - (a.reactionCount || 0));
+                } else if (sortBy === 'trending') {
+                    newStories = [...newStories].sort((a, b) => (b.commentCount || 0) - (a.commentCount || 0));
+                }
+
+                if (isRefresh || page === 1) {
+                    setStories(newStories);
+                } else {
+                    setStories(prev => [...prev, ...newStories]);
+                }
+
+                if (response.pagination) {
+                    setPagination(response.pagination);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching stories:', error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    const onRefresh = () => {
+        fetchStories(1, true);
+    };
+
+    const handleCategoryChange = (categoryName) => {
+        setSelectedCategory(categoryName);
+        setStories([]);
+        fetchStories(1, false);
+    };
+
+    // Handle search with debounce
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (selectedCategory) {
+                fetchStories(1, true);
+            }
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Handle sort change
+    useEffect(() => {
+        fetchStories(1, true);
+    }, [sortBy]);
+
+    // Initial load
+    useEffect(() => {
+        fetchStories(1);
+    }, []);
+
+    const formatTimeAgo = (dateString) => {
+        if (!dateString) return 'recent';
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+
+        if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+        if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+        return date.toLocaleDateString();
+    };
+
+    const formatNumber = (num) => {
+        if (!num) return '0';
+        if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+        if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+        return num.toString();
+    };
 
     // Filter stories based on selected category and search query
-    const filteredStories = allStories.filter(story => {
-        const matchesCategory = selectedCategory === 'All' || story.category === selectedCategory;
-        const matchesSearch = story.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                             story.headline.toLowerCase().includes(searchQuery.toLowerCase());
+    const filteredStories = stories.filter(story => {
+        const matchesCategory = selectedCategory === 'All' || story.category === selectedCategory.toLowerCase();
+        const matchesSearch = searchQuery === '' ||
+            story.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            story.summary?.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesCategory && matchesSearch;
     });
 
     // Sort stories based on sortBy
     const sortedStories = [...filteredStories].sort((a, b) => {
         if (sortBy === 'latest') {
-            return a.timeAgo.includes('hour') && b.timeAgo.includes('day') ? -1 : 1;
+            return new Date(b.createdAt) - new Date(a.createdAt);
         } else if (sortBy === 'popular') {
-            return parseInt(b.likes) - parseInt(a.likes);
+            return (b.reactionCount || 0) - (a.reactionCount || 0);
         } else {
-            return parseInt(b.comments) - parseInt(a.comments);
+            return (b.commentCount || 0) - (a.commentCount || 0);
         }
     });
 
-    const renderStoryItem = ({ item }) => (
-        <TouchableOpacity 
-            style={styles.storyCard}
-            onPress={() => navigation.navigate('StoryDetail', { storyId: item.id })}
-        >
-            <Image source={{ uri: item.image }} style={styles.storyImage} />
-            <View style={styles.storyContent}>
-                <View style={styles.storyHeader}>
-                    <ThemedText style={styles.storyTitle}>{item.title}</ThemedText>
-                    <View style={[styles.categoryBadge, { backgroundColor: categories.find(c => c.name === item.category)?.color + '20' }]}>
-                        <ThemedText style={[styles.categoryBadgeText, { color: categories.find(c => c.name === item.category)?.color }]}>
-                            {item.category}
-                        </ThemedText>
+    const renderStoryItem = ({ item }) => {
+        // console.log("item", item._id)
+        return (
+            <TouchableOpacity
+                style={styles.storyCard}
+                onPress={() => navigation.navigate('StoryDetail', { postId: item._id })}
+            >
+                <Image source={{ uri: item.coverImage }} style={styles.storyImage} />
+                <View style={styles.storyContent}>
+                    <View style={styles.storyHeader}>
+                        <ThemedText style={styles.storyTitle}>{item.title}</ThemedText>
+                        <View style={[styles.categoryBadge, { backgroundColor: categories.find(c => c.name.toLowerCase() === item.category)?.color + '20' || '#4B59B320' }]}>
+                            <ThemedText style={[styles.categoryBadgeText, { color: categories.find(c => c.name.toLowerCase() === item.category)?.color || '#4B59B3' }]}>
+                                {item.category}
+                            </ThemedText>
+                        </View>
                     </View>
-                </View>
-                
-                <ThemedText style={styles.storyHeadline} numberOfLines={2}>
-                    {item.headline}
-                </ThemedText>
-                
-                <ThemedText style={styles.storyDescription} numberOfLines={2}>
-                    {item.description}
-                </ThemedText>
 
-                <View style={styles.storyMeta}>
-                    <View style={styles.metaItem}>
-                        <Ionicons name="time-outline" size={14} color="#999" />
-                        <ThemedText style={styles.metaText}>{item.timeAgo}</ThemedText>
-                    </View>
-                    <View style={styles.metaItem}>
-                        <Foundation name="like" size={14} color="#999" />
-                        <ThemedText style={styles.metaText}>{item.likes}</ThemedText>
-                    </View>
-                    <View style={styles.metaItem}>
-                        <MaterialCommunityIcons name="message-text-outline" size={14} color="#999" />
-                        <ThemedText style={styles.metaText}>{item.comments}</ThemedText>
-                    </View>
-                    <View style={styles.metaItem}>
-                        <FontAwesome6 name="share-from-square" size={12} color="#999" />
-                        <ThemedText style={styles.metaText}>{item.shares}</ThemedText>
+                    <ThemedText style={styles.storyHeadline} numberOfLines={2}>
+                        {item.title}
+                    </ThemedText>
+
+                    <ThemedText style={styles.storyDescription} numberOfLines={2}>
+                        {item.summary}
+                    </ThemedText>
+
+                    <View style={styles.storyMeta}>
+                        <View style={styles.metaItem}>
+                            <Ionicons name="time-outline" size={14} color="#999" />
+                            <ThemedText style={styles.metaText}>{formatTimeAgo(item.createdAt)}</ThemedText>
+                        </View>
+                        <View style={styles.metaItem}>
+                            <Foundation name="like" size={14} color="#999" />
+                            <ThemedText style={styles.metaText}>{formatNumber(item.reactionCount)}</ThemedText>
+                        </View>
+                        <View style={styles.metaItem}>
+                            <MaterialCommunityIcons name="message-text-outline" size={14} color="#999" />
+                            <ThemedText style={styles.metaText}>{formatNumber(item.commentCount)}</ThemedText>
+                        </View>
+                        <View style={styles.metaItem}>
+                            <FontAwesome6 name="share-from-square" size={12} color="#999" />
+                            <ThemedText style={styles.metaText}>{formatNumber(item.shareCount)}</ThemedText>
+                        </View>
                     </View>
                 </View>
-            </View>
-        </TouchableOpacity>
-    );
+            </TouchableOpacity>
+        )
+    };
+
+    if (loading) {
+        return (
+            <ThemedView style={styles.container}>
+                <SafeAreaView style={styles.safeArea}>
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#4B59B3" />
+                    </View>
+                </SafeAreaView>
+            </ThemedView>
+        );
+    }
 
     return (
         <ThemedView style={styles.container}>
@@ -215,9 +243,9 @@ export default function CategoryStories({ route, navigation }) {
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <Ionicons name="arrow-back" size={24} color="#000" />
                     </TouchableOpacity>
-                    <ThemedText style={styles.headerTitle}>Categories</ThemedText>
+                    <ThemedText style={styles.headerTitle}>Top Stories</ThemedText>
                     <TouchableOpacity style={styles.filterButton}>
-                        <Ionicons name="options-outline" size={24} color="#000" />
+                        {/* <Ionicons name="options-outline" size={24} color="#000" /> */}
                     </TouchableOpacity>
                 </View>
 
@@ -238,43 +266,8 @@ export default function CategoryStories({ route, navigation }) {
                     )}
                 </View>
 
-                {/* Categories Horizontal Scroll */}
-                {/* <View style={styles.categoriesContainer}>
-                    <ScrollView 
-                        horizontal 
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.categoriesScroll}
-                    >
-                        {categories.map((category) => (
-                            <TouchableOpacity
-                                key={category.id}
-                                style={[
-                                    styles.categoryChip,
-                                    selectedCategory === category.name && styles.categoryChipActive,
-                                    { borderColor: category.color }
-                                ]}
-                                onPress={() => setSelectedCategory(category.name)}
-                            >
-                                <Ionicons 
-                                    name={category.icon} 
-                                    size={16} 
-                                    color={selectedCategory === category.name ? '#FFFFFF' : category.color} 
-                                />
-                                <ThemedText 
-                                    style={[
-                                        styles.categoryChipText,
-                                        selectedCategory === category.name && styles.categoryChipTextActive
-                                    ]}
-                                >
-                                    {category.name}
-                                </ThemedText>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View> */}
-
                 {/* Sort Options */}
-                <View style={styles.sortContainer}>
+                {/* <View style={styles.sortContainer}>
                     <ThemedText style={styles.sortLabel}>Sort by:</ThemedText>
                     <TouchableOpacity 
                         style={[styles.sortOption, sortBy === 'latest' && styles.sortOptionActive]}
@@ -300,7 +293,7 @@ export default function CategoryStories({ route, navigation }) {
                             Trending
                         </ThemedText>
                     </TouchableOpacity>
-                </View>
+                </View> */}
 
                 {/* Results Count */}
                 <View style={styles.resultsContainer}>
@@ -313,9 +306,16 @@ export default function CategoryStories({ route, navigation }) {
                 <FlatList
                     data={sortedStories}
                     renderItem={renderStoryItem}
-                    keyExtractor={(item) => item.id}
+                    keyExtractor={(item) => item._id}
                     contentContainerStyle={styles.storiesList}
                     showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            colors={['#4B59B3']}
+                        />
+                    }
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
                             <Ionicons name="search-outline" size={60} color="#ccc" />
@@ -388,35 +388,6 @@ const styles = StyleSheet.create({
         fontFamily: 'tenez',
         color: '#333',
         paddingVertical: 8,
-    },
-    categoriesContainer: {
-        marginBottom: 16,
-    },
-    categoriesScroll: {
-        paddingHorizontal: 16,
-        gap: 10,
-    },
-    categoryChip: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 20,
-        borderWidth: 1,
-        gap: 6,
-        backgroundColor: '#FFFFFF',
-    },
-    categoryChipActive: {
-        backgroundColor: '#4B59B3',
-        borderColor: '#4B59B3',
-    },
-    categoryChipText: {
-        fontSize: 13,
-        fontFamily: 'CoFoRaffineMedium',
-        color: '#666',
-    },
-    categoryChipTextActive: {
-        color: '#FFFFFF',
     },
     sortContainer: {
         flexDirection: 'row',
@@ -550,5 +521,10 @@ const styles = StyleSheet.create({
         fontFamily: 'tenez',
         color: '#ccc',
         marginTop: 8,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });

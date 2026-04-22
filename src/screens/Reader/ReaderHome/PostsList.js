@@ -243,7 +243,9 @@ export default function PostsList() {
 
         try {
             if (!isCurrentlyLiked) {
+                console.log("story", id, "like")
                 const result = await reactionService.addReaction('story', id, 'like');
+                console.log("result", result)
                 if (!result.success) {
                     setLikedPosts(prev => ({ ...prev, [id]: isCurrentlyLiked }));
                     setLikeCounts(prev => ({ ...prev, [id]: currentLikeCount }));
