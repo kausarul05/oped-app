@@ -19,7 +19,7 @@ import followService from '../../../services/followService';
 
 export default function AuthorProfile({ route, navigation }) {
     const { colors } = useTheme();
-    const { authorId, authorName, authorImage, authorBio } = route.params || {};
+    const { authorId } = route.params || {};
     const [activeTab, setActiveTab] = useState('Stories');
     const [menuVisible, setMenuVisible] = useState(false);
     const [author, setAuthor] = useState(null);
@@ -31,30 +31,21 @@ export default function AuthorProfile({ route, navigation }) {
     const [followerCount, setFollowerCount] = useState(0);
     const [totalStories, setTotalStories] = useState(0);
     const [totalPodcasts, setTotalPodcasts] = useState(0);
-    const [storiesPage, setStoriesPage] = useState(1);
-    const [podcastsPage, setPodcastsPage] = useState(1);
-    const [hasMoreStories, setHasMoreStories] = useState(true);
-    const [hasMorePodcasts, setHasMorePodcasts] = useState(true);
-    const [loadingMoreStories, setLoadingMoreStories] = useState(false);
-    const [loadingMorePodcasts, setLoadingMorePodcasts] = useState(false);
 
-    // Fetch author profile from API
+    // Single API call to get everything
     useEffect(() => {
         if (authorId) {
             fetchWriterProfile();
-            fetchStories(1, true);
-            fetchPodcasts(1, true);
-            checkFollowStatus();
-            fetchFollowerCount();
         }
     }, [authorId]);
 
     const fetchWriterProfile = async () => {
         try {
+            setLoading(true);
             const result = await exploreService.getWriterProfile(authorId);
             
             if (result.success && result.data) {
-                const { writer, stories, podcasts } = result.data;
+                const { writer, stories: storiesData, podcasts: podcastsData } = result.data;
                 
                 // Set author data
                 setAuthor({
@@ -63,166 +54,47 @@ export default function AuthorProfile({ route, navigation }) {
                     profileImage: writer.profileImage,
                     bio: writer.bio || 'No bio available',
                     coverImage: writer.coverImage || 'https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3&auto=format&fit=crop&w=2020&q=80',
-                    email: writer.email,
-                    isVerified: writer.isVerified,
-                    isSubscribed: writer.isSubscribed,
-                    followersCount: writer.followersCount || 0,
-                    totalStories: writer.totalStories || 0,
-                    totalPodcasts: writer.totalPodcasts || 0,
-                    totalContent: writer.totalContent || 0,
                 });
                 
-                // Set follow status from API response
+                // Set follow status and counts from writer object
                 setIsFollowing(writer.isFollowing || false);
                 setFollowerCount(writer.followersCount || 0);
                 setTotalStories(writer.totalStories || 0);
                 setTotalPodcasts(writer.totalPodcasts || 0);
-            } else {
-                // Fallback if API fails
-                setAuthor({
-                    id: authorId || '1',
-                    name: authorName || 'Eric Lach',
-                    profileImage: authorImage || 'https://randomuser.me/api/portraits/women/1.jpg',
-                    bio: authorBio || 'Writer and storyteller passionate about digital media and independent journalism.',
-                    coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3&auto=format&fit=crop&w=2020&q=80',
-                });
+                
+                // Set stories from response
+                if (storiesData && storiesData.data) {
+                    setStories(storiesData.data.map(story => ({
+                        id: story._id,
+                        title: story.title,
+                        summary: story.summary,
+                        type: story.isPremium ? 'Premium' : 'Free',
+                        image: story.coverImage,
+                        createdAt: story.createdAt,
+                        readingTime: story.readingTime,
+                        category: story.category,
+                    })));
+                }
+                
+                // Set podcasts from response
+                if (podcastsData && podcastsData.data) {
+                    setPodcasts(podcastsData.data.map(podcast => ({
+                        id: podcast._id,
+                        title: podcast.title,
+                        summary: podcast.summary,
+                        type: podcast.isPremium ? 'Premium' : 'Free',
+                        image: podcast.coverImage,
+                        createdAt: podcast.createdAt,
+                        duration: podcast.audioDuration,
+                        category: podcast.category,
+                    })));
+                }
             }
         } catch (error) {
             console.error('Error fetching writer profile:', error);
-            // Fallback mock data
-            setAuthor({
-                id: authorId || '1',
-                name: authorName || 'Eric Lach',
-                profileImage: authorImage || 'https://randomuser.me/api/portraits/women/1.jpg',
-                bio: authorBio || 'Writer and storyteller passionate about digital media and independent journalism.',
-                coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3&auto=format&fit=crop&w=2020&q=80',
-            });
+            Alert.alert('Error', 'Failed to load profile');
         } finally {
             setLoading(false);
-        }
-    };
-
-    const fetchStories = async (page = 1, isRefresh = false) => {
-        try {
-            if (isRefresh) {
-                setStoriesPage(1);
-                setHasMoreStories(true);
-            }
-            
-            if (page === 1) {
-                setLoadingMoreStories(true);
-            } else {
-                setLoadingMoreStories(true);
-            }
-            
-            const result = await exploreService.getWriterStories(authorId, page, 10);
-            
-            if (result.success && result.data) {
-                const newStories = result.data.map(story => ({
-                    id: story._id,
-                    title: story.title,
-                    summary: story.summary,
-                    type: story.isPremium ? 'Premium Story' : 'Featured Story',
-                    image: story.coverImage,
-                    createdAt: story.createdAt,
-                    readingTime: story.readingTime,
-                    category: story.category,
-                }));
-                
-                if (isRefresh || page === 1) {
-                    setStories(newStories);
-                } else {
-                    setStories(prev => [...prev, ...newStories]);
-                }
-                
-                if (result.pagination) {
-                    setHasMoreStories(page < result.pagination.totalPages);
-                    setStoriesPage(page);
-                }
-            }
-        } catch (error) {
-            console.error('Error fetching stories:', error);
-        } finally {
-            setLoadingMoreStories(false);
-        }
-    };
-
-    const fetchPodcasts = async (page = 1, isRefresh = false) => {
-        try {
-            if (isRefresh) {
-                setPodcastsPage(1);
-                setHasMorePodcasts(true);
-            }
-            
-            if (page === 1) {
-                setLoadingMorePodcasts(true);
-            } else {
-                setLoadingMorePodcasts(true);
-            }
-            
-            const result = await exploreService.getWriterPodcasts(authorId, page, 10);
-            
-            if (result.success && result.data) {
-                const newPodcasts = result.data.map(podcast => ({
-                    id: podcast._id,
-                    title: podcast.title,
-                    summary: podcast.summary,
-                    type: podcast.isPremium ? 'Premium Podcast' : 'Featured Podcast',
-                    image: podcast.coverImage,
-                    createdAt: podcast.createdAt,
-                    duration: podcast.audioDuration,
-                    category: podcast.category,
-                }));
-                
-                if (isRefresh || page === 1) {
-                    setPodcasts(newPodcasts);
-                } else {
-                    setPodcasts(prev => [...prev, ...newPodcasts]);
-                }
-                
-                if (result.pagination) {
-                    setHasMorePodcasts(page < result.pagination.totalPages);
-                    setPodcastsPage(page);
-                }
-            }
-        } catch (error) {
-            console.error('Error fetching podcasts:', error);
-        } finally {
-            setLoadingMorePodcasts(false);
-        }
-    };
-
-    const loadMoreStories = () => {
-        if (hasMoreStories && !loadingMoreStories && activeTab === 'Stories') {
-            fetchStories(storiesPage + 1);
-        }
-    };
-
-    const loadMorePodcasts = () => {
-        if (hasMorePodcasts && !loadingMorePodcasts && activeTab === 'Podcasts') {
-            fetchPodcasts(podcastsPage + 1);
-        }
-    };
-
-    const checkFollowStatus = async () => {
-        try {
-            const result = await followService.checkFollowStatus(authorId);
-            if (result.success) {
-                setIsFollowing(result.isFollowing);
-            }
-        } catch (error) {
-            console.error('Error checking follow status:', error);
-        }
-    };
-
-    const fetchFollowerCount = async () => {
-        try {
-            const result = await followService.getFollowerCount(authorId);
-            if (result.success) {
-                setFollowerCount(result.count);
-            }
-        } catch (error) {
-            console.error('Error fetching follower count:', error);
         }
     };
 
@@ -236,11 +108,6 @@ export default function AuthorProfile({ route, navigation }) {
             if (result.success) {
                 setIsFollowing(result.isFollowing);
                 setFollowerCount(prev => result.isFollowing ? prev + 1 : prev - 1);
-                
-                Alert.alert(
-                    'Success', 
-                    result.isFollowing ? `You are now following ${author?.name}` : `You unfollowed ${author?.name}`
-                );
             } else {
                 Alert.alert('Error', result.error || 'Failed to update follow status');
             }
@@ -258,9 +125,6 @@ export default function AuthorProfile({ route, navigation }) {
             case 'follow':
                 handleFollowToggle();
                 break;
-            case 'feedback':
-                Alert.alert('Give Feedback', 'Thank you for your feedback!');
-                break;
             case 'report':
                 Alert.alert('Report', 'Thank you for reporting. We will review this profile.');
                 break;
@@ -270,30 +134,59 @@ export default function AuthorProfile({ route, navigation }) {
         }
     };
 
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffTime = Math.abs(now - date);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return `${diffDays} days ago`;
+        return date.toLocaleDateString();
+    };
+
     const renderStoryItem = ({ item }) => (
         <TouchableOpacity 
-            style={styles.storyItem}
+            style={styles.contentCard}
             onPress={() => navigation.navigate('StoryDetail', { storyId: item.id })}
+            activeOpacity={0.7}
         >
-            <Image source={{ uri: item.image }} style={styles.storyImage} />
-            <View style={styles.storyContent}>
-                <ThemedText style={styles.storyTitle} numberOfLines={2}>{item.title}</ThemedText>
-                <ThemedText style={styles.storyType}>{item.type}</ThemedText>
-                <ThemedText style={styles.storyMeta}>{item.readingTime} min read</ThemedText>
+            <Image source={{ uri: item.image }} style={styles.contentImage} />
+            <View style={styles.contentInfo}>
+                <View style={styles.contentHeader}>
+                    <ThemedText style={styles.contentTitle} numberOfLines={2}>{item.title}</ThemedText>
+                    {item.type === 'Premium' && (
+                        <View style={styles.premiumTag}>
+                            <ThemedText style={styles.premiumTagText}>PREMIUM</ThemedText>
+                        </View>
+                    )}
+                </View>
+                <ThemedText style={styles.contentMeta} numberOfLines={1}>
+                    {item.readingTime} min read • {formatDate(item.createdAt)}
+                </ThemedText>
             </View>
         </TouchableOpacity>
     );
 
     const renderPodcastItem = ({ item }) => (
         <TouchableOpacity 
-            style={styles.storyItem}
+            style={styles.contentCard}
             onPress={() => navigation.navigate('PodcastDetail', { podcastId: item.id })}
+            activeOpacity={0.7}
         >
-            <Image source={{ uri: item.image }} style={styles.storyImage} />
-            <View style={styles.storyContent}>
-                <ThemedText style={styles.storyTitle} numberOfLines={2}>{item.title}</ThemedText>
-                <ThemedText style={styles.storyType}>{item.type}</ThemedText>
-                <ThemedText style={styles.storyMeta}>{item.duration} min</ThemedText>
+            <Image source={{ uri: item.image }} style={styles.contentImage} />
+            <View style={styles.contentInfo}>
+                <View style={styles.contentHeader}>
+                    <ThemedText style={styles.contentTitle} numberOfLines={2}>{item.title}</ThemedText>
+                    {item.type === 'Premium' && (
+                        <View style={styles.premiumTag}>
+                            <ThemedText style={styles.premiumTagText}>PREMIUM</ThemedText>
+                        </View>
+                    )}
+                </View>
+                <ThemedText style={styles.contentMeta} numberOfLines={1}>
+                    🎙️ {item.duration} min • {formatDate(item.createdAt)}
+                </ThemedText>
             </View>
         </TouchableOpacity>
     );
@@ -309,43 +202,35 @@ export default function AuthorProfile({ route, navigation }) {
     return (
         <ThemedView style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
-                {/* Header with Back Button and 3-dot Menu */}
+                {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <Ionicons name="arrow-back" size={24} color="#000" />
                     </TouchableOpacity>
-                    <ThemedText style={styles.headerTitle}>Author Profile</ThemedText>
-                    <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuButton}>
+                    <ThemedText style={styles.headerTitle}>Profile</ThemedText>
+                    {/* <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuButton}>
                         <Ionicons name="ellipsis-horizontal" size={24} color="#000" />
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
+                    <View></View>
                 </View>
 
-                <ScrollView showsVerticalScrollIndicator={false}>
+                <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
                     {/* Cover Image */}
                     <Image source={{ uri: author?.coverImage }} style={styles.coverImage} />
 
-                    {/* Profile Info Section */}
-                    <View style={styles.profileInfoContainer}>
-                        {/* Profile Image - Positioned to overlap cover */}
+                    {/* Profile Section */}
+                    <View style={styles.profileSection}>
                         <View style={styles.profileImageWrapper}>
                             <Image source={{ uri: author?.profileImage }} style={styles.profileImage} />
                         </View>
 
-                        {/* Author Name */}
-                        <View style={styles.nameContainer}>
+                        <View style={styles.profileInfo}>
                             <ThemedText style={styles.authorName}>{author?.name}</ThemedText>
-                            {followerCount > 0 && (
-                                <ThemedText style={styles.followerCount}>
-                                    {followerCount} {followerCount === 1 ? 'follower' : 'followers'}
-                                </ThemedText>
-                            )}
+                            <ThemedText style={styles.authorBio}>{author?.bio}</ThemedText>
                         </View>
 
-                        {/* Author Bio */}
-                        <ThemedText style={styles.authorBio}>{author?.bio}</ThemedText>
-
-                        {/* Stats */}
-                        <View style={styles.statsContainer}>
+                        {/* Stats Row */}
+                        <View style={styles.statsRow}>
                             <View style={styles.statItem}>
                                 <ThemedText style={styles.statNumber}>{totalStories}</ThemedText>
                                 <ThemedText style={styles.statLabel}>Stories</ThemedText>
@@ -363,31 +248,29 @@ export default function AuthorProfile({ route, navigation }) {
                         </View>
 
                         {/* Follow Button */}
-                        <View style={styles.actionButtonsContainer}>
-                            <TouchableOpacity 
-                                style={[styles.followButton, isFollowing && styles.followingButton]}
-                                onPress={handleFollowToggle}
-                                disabled={followingLoading}
-                            >
-                                {followingLoading ? (
-                                    <ActivityIndicator size="small" color="#FFFFFF" />
-                                ) : (
-                                    <>
-                                        <Ionicons 
-                                            name={isFollowing ? "person-remove-outline" : "person-add-outline"} 
-                                            size={18} 
-                                            color="#FFFFFF" 
-                                        />
-                                        <ThemedText style={styles.followButtonText}>
-                                            {isFollowing ? 'Unfollow' : 'Follow author'}
-                                        </ThemedText>
-                                    </>
-                                )}
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity 
+                            style={[styles.followButton, isFollowing && styles.followingButton]}
+                            onPress={handleFollowToggle}
+                            disabled={followingLoading}
+                        >
+                            {followingLoading ? (
+                                <ActivityIndicator size="small" color="#FFFFFF" />
+                            ) : (
+                                <>
+                                    <Ionicons 
+                                        name={isFollowing ? "person-remove" : "person-add"} 
+                                        size={18} 
+                                        color="#FFFFFF" 
+                                    />
+                                    <ThemedText style={styles.followButtonText}>
+                                        {isFollowing ? 'Unfollow' : 'Follow'}
+                                    </ThemedText>
+                                </>
+                            )}
+                        </TouchableOpacity>
                     </View>
 
-                    {/* Stories | Podcasts Tabs */}
+                    {/* Tabs */}
                     <View style={styles.tabsContainer}>
                         <TouchableOpacity
                             style={[styles.tab, activeTab === 'Stories' && styles.activeTab]}
@@ -407,59 +290,40 @@ export default function AuthorProfile({ route, navigation }) {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Stories List */}
-                    {activeTab === 'Stories' && (
-                        <View style={styles.listContainer}>
-                            {stories.length > 0 ? (
+                    {/* Content List */}
+                    <View style={styles.listContainer}>
+                        {activeTab === 'Stories' ? (
+                            stories.length > 0 ? (
                                 <FlatList
                                     data={stories}
                                     renderItem={renderStoryItem}
                                     keyExtractor={(item) => item.id}
                                     scrollEnabled={false}
                                     contentContainerStyle={styles.listContent}
-                                    onEndReached={loadMoreStories}
-                                    onEndReachedThreshold={0.3}
-                                    ListFooterComponent={
-                                        loadingMoreStories ? (
-                                            <ActivityIndicator size="small" color="#4B59B3" style={styles.loaderMore} />
-                                        ) : null
-                                    }
                                 />
                             ) : (
                                 <View style={styles.emptyContainer}>
                                     <Ionicons name="document-text-outline" size={48} color="#ccc" />
                                     <ThemedText style={styles.emptyText}>No stories yet</ThemedText>
                                 </View>
-                            )}
-                        </View>
-                    )}
-
-                    {/* Podcasts List */}
-                    {activeTab === 'Podcasts' && (
-                        <View style={styles.listContainer}>
-                            {podcasts.length > 0 ? (
+                            )
+                        ) : (
+                            podcasts.length > 0 ? (
                                 <FlatList
                                     data={podcasts}
                                     renderItem={renderPodcastItem}
                                     keyExtractor={(item) => item.id}
                                     scrollEnabled={false}
                                     contentContainerStyle={styles.listContent}
-                                    onEndReached={loadMorePodcasts}
-                                    onEndReachedThreshold={0.3}
-                                    ListFooterComponent={
-                                        loadingMorePodcasts ? (
-                                            <ActivityIndicator size="small" color="#4B59B3" style={styles.loaderMore} />
-                                        ) : null
-                                    }
                                 />
                             ) : (
                                 <View style={styles.emptyContainer}>
                                     <Ionicons name="mic-outline" size={48} color="#ccc" />
                                     <ThemedText style={styles.emptyText}>No podcasts yet</ThemedText>
                                 </View>
-                            )}
-                        </View>
-                    )}
+                            )
+                        )}
+                    </View>
                 </ScrollView>
 
                 {/* Three Dot Menu Modal */}
@@ -474,7 +338,7 @@ export default function AuthorProfile({ route, navigation }) {
                         activeOpacity={1}
                         onPress={() => setMenuVisible(false)}
                     >
-                        <View style={[styles.menuContainer, { backgroundColor: '#FFFFFF' }]}>
+                        <View style={styles.menuContainer}>
                             <TouchableOpacity 
                                 style={styles.menuItem}
                                 onPress={() => handleMenuOption('follow')}
@@ -485,18 +349,8 @@ export default function AuthorProfile({ route, navigation }) {
                                     color="#000" 
                                 />
                                 <ThemedText style={styles.menuText}>
-                                    {isFollowing ? 'Unfollow Author' : 'Follow Author'}
+                                    {isFollowing ? 'Unfollow' : 'Follow'}
                                 </ThemedText>
-                            </TouchableOpacity>
-                            
-                            <View style={styles.menuDivider} />
-                            
-                            <TouchableOpacity 
-                                style={styles.menuItem}
-                                onPress={() => handleMenuOption('feedback')}
-                            >
-                                <Ionicons name="chatbubble-outline" size={20} color="#000" />
-                                <ThemedText style={styles.menuText}>Give Feedback</ThemedText>
                             </TouchableOpacity>
                             
                             <View style={styles.menuDivider} />
@@ -506,7 +360,7 @@ export default function AuthorProfile({ route, navigation }) {
                                 onPress={() => handleMenuOption('report')}
                             >
                                 <Ionicons name="flag-outline" size={20} color="#000" />
-                                <ThemedText style={styles.menuText}>Report Author</ThemedText>
+                                <ThemedText style={styles.menuText}>Report</ThemedText>
                             </TouchableOpacity>
                             
                             <View style={styles.menuDivider} />
@@ -516,7 +370,7 @@ export default function AuthorProfile({ route, navigation }) {
                                 onPress={() => handleMenuOption('block')}
                             >
                                 <Ionicons name="ban-outline" size={20} color="#FF3B30" />
-                                <ThemedText style={[styles.menuText, styles.blockText]}>Block Author</ThemedText>
+                                <ThemedText style={[styles.menuText, styles.blockText]}>Block</ThemedText>
                             </TouchableOpacity>
                         </View>
                     </TouchableOpacity>
@@ -566,23 +420,23 @@ const styles = StyleSheet.create({
         fontWeight: '400',
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
+        letterSpacing: .5
     },
     coverImage: {
         width: '100%',
-        height: 200,
+        height: 180,
         resizeMode: 'cover',
     },
-    profileInfoContainer: {
-        paddingHorizontal: 16,
-        paddingTop: 40,
-        paddingBottom: 24,
+    profileSection: {
+        paddingHorizontal: 20,
+        paddingBottom: 20,
         borderBottomWidth: 1,
         borderBottomColor: '#F0F0F0',
     },
     profileImageWrapper: {
         position: 'absolute',
         top: -40,
-        left: 16,
+        left: 20,
         borderRadius: 50,
         borderWidth: 3,
         borderColor: '#FFFFFF',
@@ -598,35 +452,24 @@ const styles = StyleSheet.create({
         height: 80,
         borderRadius: 40,
     },
-    nameContainer: {
-        marginBottom: 12,
-        marginTop: 8,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
+    profileInfo: {
+        marginTop: 50,
+        marginBottom: 16,
     },
     authorName: {
         fontSize: 24,
         fontWeight: '600',
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
-        flex: 1,
-    },
-    followerCount: {
-        fontSize: 14,
-        fontFamily: 'tenez',
-        color: '#666',
-        marginLeft: 8,
+        marginBottom: 6,
     },
     authorBio: {
         fontSize: 14,
         fontFamily: 'tenez',
         color: '#666',
         lineHeight: 20,
-        marginBottom: 16,
     },
-    statsContainer: {
+    statsRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-around',
@@ -656,36 +499,30 @@ const styles = StyleSheet.create({
         height: 30,
         backgroundColor: '#E0E0E0',
     },
-    actionButtonsContainer: {
-        flexDirection: 'row',
-        gap: 12,
-    },
     followButton: {
-        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#4B59B3',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 8,
+        paddingVertical: 12,
+        borderRadius: 10,
         gap: 8,
     },
     followingButton: {
-        backgroundColor: '#FF3B30',
+        backgroundColor: '#EF4444',
     },
     followButtonText: {
         color: '#FFFFFF',
-        fontSize: 14,
+        fontSize: 16,
         fontFamily: 'CoFoRaffineMedium',
     },
     tabsContainer: {
         flexDirection: 'row',
-        paddingHorizontal: 16,
+        paddingHorizontal: 20,
         paddingVertical: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#F0F0F0',
-        gap: 24,
+        gap: 32,
     },
     tab: {
         paddingBottom: 8,
@@ -704,82 +541,60 @@ const styles = StyleSheet.create({
         fontFamily: 'CoFoRaffineBold',
     },
     listContainer: {
-        paddingHorizontal: 16,
+        paddingHorizontal: 20,
         paddingVertical: 16,
     },
     listContent: {
-        gap: 16,
-    },
-    storyItem: {
-        flexDirection: 'row',
         gap: 12,
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-        elevation: 1,
+    },
+    contentCard: {
+        flexDirection: 'row',
         backgroundColor: '#FFFFFF',
-        borderRadius: 8,
-        padding: 8,
-        marginBottom: 8
-    },
-    storyImage: {
-        width: 60,
-        height: 60,
-        borderRadius: 8,
-    },
-    storyContent: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    storyTitle: {
-        fontSize: 14,
-        fontFamily: 'tenez',
-        color: '#333',
-        marginBottom: 4,
-        lineHeight: 18,
-    },
-    storyType: {
-        fontSize: 12,
-        fontFamily: 'CoFoRaffineMedium',
-        color: '#4B59B3',
-    },
-    storyMeta: {
-        fontSize: 10,
-        fontFamily: 'tenez',
-        color: '#999',
-        marginTop: 2,
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    menuContainer: {
         borderRadius: 12,
-        padding: 8,
-        width: '80%',
-        maxWidth: 300,
-    },
-    menuItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
+        borderWidth: 1,
+        borderColor: '#F0F0F0',
+        padding: 12,
         gap: 12,
     },
-    menuText: {
-        fontSize: 16,
+    contentImage: {
+        width: 70,
+        height: 70,
+        borderRadius: 8,
+    },
+    contentInfo: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    contentHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 6,
+        flexWrap: 'wrap',
+    },
+    contentTitle: {
+        fontSize: 14,
         fontFamily: 'CoFoRaffineMedium',
         color: '#000',
+        flex: 1,
+        lineHeight: 18,
     },
-    menuDivider: {
-        height: 1,
-        backgroundColor: '#F0F0F0',
-        marginHorizontal: 16,
+    premiumTag: {
+        backgroundColor: '#FF9500',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
     },
-    blockItem: {},
-    blockText: {
-        color: '#FF3B30',
+    premiumTagText: {
+        fontSize: 8,
+        fontWeight: 'bold',
+        color: '#FFF',
+        fontFamily: 'CoFoRaffineBold',
+    },
+    contentMeta: {
+        fontSize: 11,
+        fontFamily: 'tenez',
+        color: '#999',
     },
     emptyContainer: {
         alignItems: 'center',
@@ -792,7 +607,35 @@ const styles = StyleSheet.create({
         color: '#999',
         marginTop: 12,
     },
-    loaderMore: {
-        paddingVertical: 16,
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    menuContainer: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 8,
+        width: 250,
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 14,
+        gap: 12,
+    },
+    menuText: {
+        fontSize: 16,
+        fontFamily: 'CoFoRaffineMedium',
+        color: '#000',
+    },
+    menuDivider: {
+        height: 1,
+        backgroundColor: '#F0F0F0',
+    },
+    blockItem: {},
+    blockText: {
+        color: '#FF3B30',
     },
 });
