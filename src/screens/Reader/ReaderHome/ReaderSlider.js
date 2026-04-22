@@ -24,7 +24,7 @@ import storyService from '../../../services/storyService';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.7;
-const CARD_HEIGHT = 410;
+const CARD_HEIGHT = 380;
 const SLIDER_WIDTH = 400;
 
 import { LogBox } from 'react-native';
@@ -261,7 +261,7 @@ export default function ReaderSlider() {
         try {
             const shareUrl = `https://hoped.com/story/${item.id}`;
             await Share.share({
-                message: `${item.subtitle}\n\nRead more: ${shareUrl}\n\nShared via HOPED App`,
+                message: `${shareUrl}`,
                 title: 'Share Article',
                 url: shareUrl
             });
@@ -686,9 +686,10 @@ export default function ReaderSlider() {
                 itemWidth={350}
                 inactiveSlideScale={0.9}
                 inactiveSlideOpacity={0.7}
-                loop={false}
-                autoplay={false}
+                loop={true}
+                autoplay={true}
                 onSnapToItem={onSnapToItem}
+
             />
 
             {/* Comment Modal */}
@@ -763,7 +764,7 @@ const styles = StyleSheet.create({
     centerContainer: { justifyContent: 'center', alignItems: 'center', minHeight: 300 },
     noDataText: { fontSize: 16, fontFamily: 'tenez', color: '#999' },
     cardContainer: {
-        width: '100%',
+        width: '85%',
         height: CARD_HEIGHT,
         borderRadius: 16,
         overflow: 'hidden',
@@ -771,7 +772,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         borderWidth: 1,
-        borderColor: '#0000001F'
+        borderColor: '#0000001F',
     },
     cardImage: { width: '100%', height: 220, resizeMode: 'cover' },
     bookmarkButton: { position: 'absolute', top: 12, right: 12, zIndex: 10, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: 20, padding: 6 },
