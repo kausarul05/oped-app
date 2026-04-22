@@ -6,6 +6,7 @@ import Library from '../screens/Reader/Inbox/Library';
 import Newsletter from '../screens/Reader/Inbox/Newsletter';
 import ReadLater from '../screens/Reader/Inbox/ReadLater';
 import Saved from '../screens/Reader/Inbox/Saved';
+import PodcastDetail from '../screens/Reader/Podcast/PodcastDetail';
 import AuthorProfile from '../screens/Reader/ReaderHome/AuthorProfile';
 import StoryDetail from '../screens/Reader/ReaderHome/StoreDetail';
 import ProfileStack from './ProfileStack';
@@ -29,6 +30,7 @@ export default function InboxStack() {
             <Stack.Screen name="Saved" component={Saved} />
             <Stack.Screen name="Profile" component={ProfileStack} />
             <Stack.Screen name="AuthorProfile" component={AuthorProfile} />
+            <Stack.Screen name="PodcastDetail" component={PodcastDetail} />
             {/* <Stack.Screen name="ChatDetail" component={ChatDetail} />
             <Stack.Screen name="Notifications" component={Notifications} /> */}
         </Stack.Navigator>

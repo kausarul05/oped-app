@@ -7,7 +7,7 @@ const libraryService = {
     toggleSave: async ({ contentType, contentId, listType = 'saved' }) => {
         try {
             const token = await AsyncStorage.getItem('authToken');
-            
+
             const response = await api.post('/api/v1/library/toggle', {
                 contentType,
                 contentId,
@@ -23,21 +23,21 @@ const libraryService = {
                     data: response.data.data
                 };
             }
-            return { 
-                success: false, 
-                error: response.data?.message || 'Failed to save content' 
+            return {
+                success: false,
+                error: response.data?.message || 'Failed to save content'
             };
         } catch (error) {
             console.error('Toggle save error:', error);
             if (error.response) {
-                return { 
-                    success: false, 
-                    error: error.response.data?.message || 'Server error' 
+                return {
+                    success: false,
+                    error: error.response.data?.message || 'Server error'
                 };
             }
-            return { 
-                success: false, 
-                error: error.message || 'Failed to save content' 
+            return {
+                success: false,
+                error: error.message || 'Failed to save content'
             };
         }
     },
@@ -61,6 +61,29 @@ const libraryService = {
             return { success: false, data: [], error: 'No data found' };
         } catch (error) {
             console.error('Get saved items error:', error);
+            return { success: false, data: [], error: error.message };
+        }
+    },
+
+    // Get read later items by content type
+    getReadLaterItems: async (contentType, page = 1, limit = 10) => {
+        try {
+            const token = await AsyncStorage.getItem('authToken');
+            const response = await api.get('/api/v1/library/read-later', {
+                params: { contentType, page, limit },
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
+
+            if (response.data && response.data.success) {
+                return {
+                    success: true,
+                    data: response.data.data,
+                    pagination: response.data.pagination
+                };
+            }
+            return { success: false, data: [], error: 'No data found' };
+        } catch (error) {
+            console.error('Get read later items error:', error);
             return { success: false, data: [], error: error.message };
         }
     },
