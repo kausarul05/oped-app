@@ -14,8 +14,8 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import authService from '../../../services/authService';
-import storyService from '../../../services/storyService';
+import exploreService from '../../../services/exploreService';
+import followService from '../../../services/followService';
 
 export default function AuthorProfile({ route, navigation }) {
     const { colors } = useTheme();
@@ -26,46 +26,61 @@ export default function AuthorProfile({ route, navigation }) {
     const [loading, setLoading] = useState(true);
     const [stories, setStories] = useState([]);
     const [podcasts, setPodcasts] = useState([]);
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [followingLoading, setFollowingLoading] = useState(false);
+    const [followerCount, setFollowerCount] = useState(0);
+    const [totalStories, setTotalStories] = useState(0);
+    const [totalPodcasts, setTotalPodcasts] = useState(0);
+    const [storiesPage, setStoriesPage] = useState(1);
+    const [podcastsPage, setPodcastsPage] = useState(1);
+    const [hasMoreStories, setHasMoreStories] = useState(true);
+    const [hasMorePodcasts, setHasMorePodcasts] = useState(true);
+    const [loadingMoreStories, setLoadingMoreStories] = useState(false);
+    const [loadingMorePodcasts, setLoadingMorePodcasts] = useState(false);
 
     // Fetch author profile from API
     useEffect(() => {
-        fetchAuthorProfile();
-        fetchAuthorStories();
+        if (authorId) {
+            fetchWriterProfile();
+            fetchStories(1, true);
+            fetchPodcasts(1, true);
+            checkFollowStatus();
+            fetchFollowerCount();
+        }
     }, [authorId]);
 
-    const fetchAuthorProfile = async () => {
+    const fetchWriterProfile = async () => {
         try {
-            // If we have author data from params, use it
-            if (authorName && authorImage) {
-                setAuthor({
-                    id: authorId,
-                    name: authorName,
-                    profileImage: authorImage,
-                    bio: authorBio || 'No bio available',
-                    coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3&auto=format&fit=crop&w=2020&q=80',
-                });
-                setLoading(false);
-                return;
-            }
-
-            // Otherwise fetch from API
-            const result = await authService.getProfile();
+            const result = await exploreService.getWriterProfile(authorId);
+            
             if (result.success && result.data) {
-                const profileData = result.data;
+                const { writer, stories, podcasts } = result.data;
+                
+                // Set author data
                 setAuthor({
-                    id: profileData._id,
-                    name: profileData.name,
-                    profileImage: profileData.profileImage,
-                    bio: profileData.bio || 'No bio available',
-                    coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3&auto=format&fit=crop&w=2020&q=80',
-                    email: profileData.email,
-                    isVerified: profileData.isVerified,
-                    isSubscribed: profileData.isSubscribed,
+                    id: writer._id,
+                    name: writer.name,
+                    profileImage: writer.profileImage,
+                    bio: writer.bio || 'No bio available',
+                    coverImage: writer.coverImage || 'https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-4.0.3&auto=format&fit=crop&w=2020&q=80',
+                    email: writer.email,
+                    isVerified: writer.isVerified,
+                    isSubscribed: writer.isSubscribed,
+                    followersCount: writer.followersCount || 0,
+                    totalStories: writer.totalStories || 0,
+                    totalPodcasts: writer.totalPodcasts || 0,
+                    totalContent: writer.totalContent || 0,
                 });
+                
+                // Set follow status from API response
+                setIsFollowing(writer.isFollowing || false);
+                setFollowerCount(writer.followersCount || 0);
+                setTotalStories(writer.totalStories || 0);
+                setTotalPodcasts(writer.totalPodcasts || 0);
             } else {
-                // Fallback mock data
+                // Fallback if API fails
                 setAuthor({
-                    id: '1',
+                    id: authorId || '1',
                     name: authorName || 'Eric Lach',
                     profileImage: authorImage || 'https://randomuser.me/api/portraits/women/1.jpg',
                     bio: authorBio || 'Writer and storyteller passionate about digital media and independent journalism.',
@@ -73,7 +88,7 @@ export default function AuthorProfile({ route, navigation }) {
                 });
             }
         } catch (error) {
-            console.error('Error fetching author profile:', error);
+            console.error('Error fetching writer profile:', error);
             // Fallback mock data
             setAuthor({
                 id: authorId || '1',
@@ -87,27 +102,153 @@ export default function AuthorProfile({ route, navigation }) {
         }
     };
 
-    const fetchAuthorStories = async () => {
+    const fetchStories = async (page = 1, isRefresh = false) => {
         try {
-            // Fetch stories by author
-            const result = await storyService.getStories('', 1, 10);
+            if (isRefresh) {
+                setStoriesPage(1);
+                setHasMoreStories(true);
+            }
+            
+            if (page === 1) {
+                setLoadingMoreStories(true);
+            } else {
+                setLoadingMoreStories(true);
+            }
+            
+            const result = await exploreService.getWriterStories(authorId, page, 10);
+            
             if (result.success && result.data) {
-                const authorStories = result.data.filter(story => story.author?._id === authorId);
-                setStories(authorStories.map(story => ({
+                const newStories = result.data.map(story => ({
                     id: story._id,
                     title: story.title,
+                    summary: story.summary,
                     type: story.isPremium ? 'Premium Story' : 'Featured Story',
                     image: story.coverImage,
-                })));
-            } else {
-                // Mock data
-                setStories([
-                    { id: '1', title: 'The Future of Digital Media and the Changing Voice of Independent Journalism...', type: 'Featured Story', image: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80' },
-                    { id: '2', title: 'The Future of Digital Media and the Changing Voice of Independent Journalism...', type: 'Featured Article', image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80' },
-                ]);
+                    createdAt: story.createdAt,
+                    readingTime: story.readingTime,
+                    category: story.category,
+                }));
+                
+                if (isRefresh || page === 1) {
+                    setStories(newStories);
+                } else {
+                    setStories(prev => [...prev, ...newStories]);
+                }
+                
+                if (result.pagination) {
+                    setHasMoreStories(page < result.pagination.totalPages);
+                    setStoriesPage(page);
+                }
             }
         } catch (error) {
-            console.error('Error fetching author stories:', error);
+            console.error('Error fetching stories:', error);
+        } finally {
+            setLoadingMoreStories(false);
+        }
+    };
+
+    const fetchPodcasts = async (page = 1, isRefresh = false) => {
+        try {
+            if (isRefresh) {
+                setPodcastsPage(1);
+                setHasMorePodcasts(true);
+            }
+            
+            if (page === 1) {
+                setLoadingMorePodcasts(true);
+            } else {
+                setLoadingMorePodcasts(true);
+            }
+            
+            const result = await exploreService.getWriterPodcasts(authorId, page, 10);
+            
+            if (result.success && result.data) {
+                const newPodcasts = result.data.map(podcast => ({
+                    id: podcast._id,
+                    title: podcast.title,
+                    summary: podcast.summary,
+                    type: podcast.isPremium ? 'Premium Podcast' : 'Featured Podcast',
+                    image: podcast.coverImage,
+                    createdAt: podcast.createdAt,
+                    duration: podcast.audioDuration,
+                    category: podcast.category,
+                }));
+                
+                if (isRefresh || page === 1) {
+                    setPodcasts(newPodcasts);
+                } else {
+                    setPodcasts(prev => [...prev, ...newPodcasts]);
+                }
+                
+                if (result.pagination) {
+                    setHasMorePodcasts(page < result.pagination.totalPages);
+                    setPodcastsPage(page);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching podcasts:', error);
+        } finally {
+            setLoadingMorePodcasts(false);
+        }
+    };
+
+    const loadMoreStories = () => {
+        if (hasMoreStories && !loadingMoreStories && activeTab === 'Stories') {
+            fetchStories(storiesPage + 1);
+        }
+    };
+
+    const loadMorePodcasts = () => {
+        if (hasMorePodcasts && !loadingMorePodcasts && activeTab === 'Podcasts') {
+            fetchPodcasts(podcastsPage + 1);
+        }
+    };
+
+    const checkFollowStatus = async () => {
+        try {
+            const result = await followService.checkFollowStatus(authorId);
+            if (result.success) {
+                setIsFollowing(result.isFollowing);
+            }
+        } catch (error) {
+            console.error('Error checking follow status:', error);
+        }
+    };
+
+    const fetchFollowerCount = async () => {
+        try {
+            const result = await followService.getFollowerCount(authorId);
+            if (result.success) {
+                setFollowerCount(result.count);
+            }
+        } catch (error) {
+            console.error('Error fetching follower count:', error);
+        }
+    };
+
+    const handleFollowToggle = async () => {
+        if (followingLoading) return;
+        
+        setFollowingLoading(true);
+        try {
+            const result = await followService.toggleFollow(authorId);
+            
+            if (result.success) {
+                setIsFollowing(result.isFollowing);
+                setFollowerCount(prev => result.isFollowing ? prev + 1 : prev - 1);
+                
+                Alert.alert(
+                    'Success', 
+                    result.isFollowing ? `You are now following ${author?.name}` : `You unfollowed ${author?.name}`
+                );
+            } else {
+                Alert.alert('Error', result.error || 'Failed to update follow status');
+            }
+        } catch (error) {
+            console.error('Error toggling follow:', error);
+            Alert.alert('Error', 'Failed to update follow status');
+        } finally {
+            setFollowingLoading(false);
         }
     };
 
@@ -115,7 +256,7 @@ export default function AuthorProfile({ route, navigation }) {
         setMenuVisible(false);
         switch(option) {
             case 'follow':
-                Alert.alert('Follow', `You are now following ${author?.name}`);
+                handleFollowToggle();
                 break;
             case 'feedback':
                 Alert.alert('Give Feedback', 'Thank you for your feedback!');
@@ -132,12 +273,27 @@ export default function AuthorProfile({ route, navigation }) {
     const renderStoryItem = ({ item }) => (
         <TouchableOpacity 
             style={styles.storyItem}
-            onPress={() => navigation.navigate('StoryDetail', { postId: item.id })}
+            onPress={() => navigation.navigate('StoryDetail', { storyId: item.id })}
         >
             <Image source={{ uri: item.image }} style={styles.storyImage} />
             <View style={styles.storyContent}>
-                <ThemedText style={styles.storyTitle}>{item.title}</ThemedText>
+                <ThemedText style={styles.storyTitle} numberOfLines={2}>{item.title}</ThemedText>
                 <ThemedText style={styles.storyType}>{item.type}</ThemedText>
+                <ThemedText style={styles.storyMeta}>{item.readingTime} min read</ThemedText>
+            </View>
+        </TouchableOpacity>
+    );
+
+    const renderPodcastItem = ({ item }) => (
+        <TouchableOpacity 
+            style={styles.storyItem}
+            onPress={() => navigation.navigate('PodcastDetail', { podcastId: item.id })}
+        >
+            <Image source={{ uri: item.image }} style={styles.storyImage} />
+            <View style={styles.storyContent}>
+                <ThemedText style={styles.storyTitle} numberOfLines={2}>{item.title}</ThemedText>
+                <ThemedText style={styles.storyType}>{item.type}</ThemedText>
+                <ThemedText style={styles.storyMeta}>{item.duration} min</ThemedText>
             </View>
         </TouchableOpacity>
     );
@@ -160,7 +316,7 @@ export default function AuthorProfile({ route, navigation }) {
                     </TouchableOpacity>
                     <ThemedText style={styles.headerTitle}>Author Profile</ThemedText>
                     <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuButton}>
-                        <Ionicons name="ellipsis-vertical" size={24} color="#000" />
+                        <Ionicons name="ellipsis-horizontal" size={24} color="#000" />
                     </TouchableOpacity>
                 </View>
 
@@ -178,27 +334,55 @@ export default function AuthorProfile({ route, navigation }) {
                         {/* Author Name */}
                         <View style={styles.nameContainer}>
                             <ThemedText style={styles.authorName}>{author?.name}</ThemedText>
+                            {followerCount > 0 && (
+                                <ThemedText style={styles.followerCount}>
+                                    {followerCount} {followerCount === 1 ? 'follower' : 'followers'}
+                                </ThemedText>
+                            )}
                         </View>
 
                         {/* Author Bio */}
                         <ThemedText style={styles.authorBio}>{author?.bio}</ThemedText>
 
-                        {/* Follow and Feedback Buttons */}
+                        {/* Stats */}
+                        <View style={styles.statsContainer}>
+                            <View style={styles.statItem}>
+                                <ThemedText style={styles.statNumber}>{totalStories}</ThemedText>
+                                <ThemedText style={styles.statLabel}>Stories</ThemedText>
+                            </View>
+                            <View style={styles.statDivider} />
+                            <View style={styles.statItem}>
+                                <ThemedText style={styles.statNumber}>{totalPodcasts}</ThemedText>
+                                <ThemedText style={styles.statLabel}>Podcasts</ThemedText>
+                            </View>
+                            <View style={styles.statDivider} />
+                            <View style={styles.statItem}>
+                                <ThemedText style={styles.statNumber}>{followerCount}</ThemedText>
+                                <ThemedText style={styles.statLabel}>Followers</ThemedText>
+                            </View>
+                        </View>
+
+                        {/* Follow Button */}
                         <View style={styles.actionButtonsContainer}>
                             <TouchableOpacity 
-                                style={styles.followButton}
-                                onPress={() => Alert.alert('Follow', `You are now following ${author?.name}`)}
+                                style={[styles.followButton, isFollowing && styles.followingButton]}
+                                onPress={handleFollowToggle}
+                                disabled={followingLoading}
                             >
-                                <Ionicons name="person-add-outline" size={18} color="#FFFFFF" />
-                                <ThemedText style={styles.followButtonText}>Follow author</ThemedText>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity 
-                                style={styles.feedbackButton}
-                                onPress={() => Alert.alert('Give Feedback', 'Thank you for your feedback!')}
-                            >
-                                <Ionicons name="chatbubble-outline" size={18} color="#4B59B3" />
-                                <ThemedText style={styles.feedbackButtonText}>Give feedback</ThemedText>
+                                {followingLoading ? (
+                                    <ActivityIndicator size="small" color="#FFFFFF" />
+                                ) : (
+                                    <>
+                                        <Ionicons 
+                                            name={isFollowing ? "person-remove-outline" : "person-add-outline"} 
+                                            size={18} 
+                                            color="#FFFFFF" 
+                                        />
+                                        <ThemedText style={styles.followButtonText}>
+                                            {isFollowing ? 'Unfollow' : 'Follow author'}
+                                        </ThemedText>
+                                    </>
+                                )}
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -210,7 +394,7 @@ export default function AuthorProfile({ route, navigation }) {
                             onPress={() => setActiveTab('Stories')}
                         >
                             <ThemedText style={[styles.tabText, activeTab === 'Stories' && styles.activeTabText]}>
-                                Stories ({stories.length})
+                                Stories ({totalStories})
                             </ThemedText>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -218,7 +402,7 @@ export default function AuthorProfile({ route, navigation }) {
                             onPress={() => setActiveTab('Podcasts')}
                         >
                             <ThemedText style={[styles.tabText, activeTab === 'Podcasts' && styles.activeTabText]}>
-                                Podcasts ({podcasts.length})
+                                Podcasts ({totalPodcasts})
                             </ThemedText>
                         </TouchableOpacity>
                     </View>
@@ -226,26 +410,54 @@ export default function AuthorProfile({ route, navigation }) {
                     {/* Stories List */}
                     {activeTab === 'Stories' && (
                         <View style={styles.listContainer}>
-                            <FlatList
-                                data={stories}
-                                renderItem={renderStoryItem}
-                                keyExtractor={(item) => item.id}
-                                scrollEnabled={false}
-                                contentContainerStyle={styles.listContent}
-                            />
+                            {stories.length > 0 ? (
+                                <FlatList
+                                    data={stories}
+                                    renderItem={renderStoryItem}
+                                    keyExtractor={(item) => item.id}
+                                    scrollEnabled={false}
+                                    contentContainerStyle={styles.listContent}
+                                    onEndReached={loadMoreStories}
+                                    onEndReachedThreshold={0.3}
+                                    ListFooterComponent={
+                                        loadingMoreStories ? (
+                                            <ActivityIndicator size="small" color="#4B59B3" style={styles.loaderMore} />
+                                        ) : null
+                                    }
+                                />
+                            ) : (
+                                <View style={styles.emptyContainer}>
+                                    <Ionicons name="document-text-outline" size={48} color="#ccc" />
+                                    <ThemedText style={styles.emptyText}>No stories yet</ThemedText>
+                                </View>
+                            )}
                         </View>
                     )}
 
                     {/* Podcasts List */}
                     {activeTab === 'Podcasts' && (
                         <View style={styles.listContainer}>
-                            <FlatList
-                                data={podcasts}
-                                renderItem={renderStoryItem}
-                                keyExtractor={(item) => item.id}
-                                scrollEnabled={false}
-                                contentContainerStyle={styles.listContent}
-                            />
+                            {podcasts.length > 0 ? (
+                                <FlatList
+                                    data={podcasts}
+                                    renderItem={renderPodcastItem}
+                                    keyExtractor={(item) => item.id}
+                                    scrollEnabled={false}
+                                    contentContainerStyle={styles.listContent}
+                                    onEndReached={loadMorePodcasts}
+                                    onEndReachedThreshold={0.3}
+                                    ListFooterComponent={
+                                        loadingMorePodcasts ? (
+                                            <ActivityIndicator size="small" color="#4B59B3" style={styles.loaderMore} />
+                                        ) : null
+                                    }
+                                />
+                            ) : (
+                                <View style={styles.emptyContainer}>
+                                    <Ionicons name="mic-outline" size={48} color="#ccc" />
+                                    <ThemedText style={styles.emptyText}>No podcasts yet</ThemedText>
+                                </View>
+                            )}
                         </View>
                     )}
                 </ScrollView>
@@ -267,8 +479,14 @@ export default function AuthorProfile({ route, navigation }) {
                                 style={styles.menuItem}
                                 onPress={() => handleMenuOption('follow')}
                             >
-                                <Ionicons name="person-add-outline" size={20} color="#000" />
-                                <ThemedText style={styles.menuText}>Follow Author</ThemedText>
+                                <Ionicons 
+                                    name={isFollowing ? "person-remove-outline" : "person-add-outline"} 
+                                    size={20} 
+                                    color="#000" 
+                                />
+                                <ThemedText style={styles.menuText}>
+                                    {isFollowing ? 'Unfollow Author' : 'Follow Author'}
+                                </ThemedText>
                             </TouchableOpacity>
                             
                             <View style={styles.menuDivider} />
@@ -382,13 +600,24 @@ const styles = StyleSheet.create({
     },
     nameContainer: {
         marginBottom: 12,
-        marginTop: 8
+        marginTop: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
     },
     authorName: {
         fontSize: 24,
         fontWeight: '600',
         fontFamily: 'CoFoRaffineBold',
         color: '#000',
+        flex: 1,
+    },
+    followerCount: {
+        fontSize: 14,
+        fontFamily: 'tenez',
+        color: '#666',
+        marginLeft: 8,
     },
     authorBio: {
         fontSize: 14,
@@ -396,6 +625,36 @@ const styles = StyleSheet.create({
         color: '#666',
         lineHeight: 20,
         marginBottom: 16,
+    },
+    statsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        marginBottom: 20,
+        paddingVertical: 12,
+        backgroundColor: '#F8F9FA',
+        borderRadius: 12,
+    },
+    statItem: {
+        alignItems: 'center',
+        flex: 1,
+    },
+    statNumber: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        fontFamily: 'CoFoRaffineBold',
+        color: '#000',
+    },
+    statLabel: {
+        fontSize: 12,
+        fontFamily: 'tenez',
+        color: '#666',
+        marginTop: 4,
+    },
+    statDivider: {
+        width: 1,
+        height: 30,
+        backgroundColor: '#E0E0E0',
     },
     actionButtonsContainer: {
         flexDirection: 'row',
@@ -412,24 +671,11 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         gap: 8,
     },
+    followingButton: {
+        backgroundColor: '#FF3B30',
+    },
     followButtonText: {
         color: '#FFFFFF',
-        fontSize: 14,
-        fontFamily: 'CoFoRaffineMedium',
-    },
-    feedbackButton: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#F0F0F0',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        gap: 8,
-    },
-    feedbackButtonText: {
-        color: '#4B59B3',
         fontSize: 14,
         fontFamily: 'CoFoRaffineMedium',
     },
@@ -497,6 +743,12 @@ const styles = StyleSheet.create({
         fontFamily: 'CoFoRaffineMedium',
         color: '#4B59B3',
     },
+    storyMeta: {
+        fontSize: 10,
+        fontFamily: 'tenez',
+        color: '#999',
+        marginTop: 2,
+    },
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
@@ -528,5 +780,19 @@ const styles = StyleSheet.create({
     blockItem: {},
     blockText: {
         color: '#FF3B30',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 60,
+    },
+    emptyText: {
+        fontSize: 16,
+        fontFamily: 'tenez',
+        color: '#999',
+        marginTop: 12,
+    },
+    loaderMore: {
+        paddingVertical: 16,
     },
 });
