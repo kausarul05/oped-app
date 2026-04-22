@@ -732,11 +732,11 @@ export default function PostsList() {
                 onPress={() => navigation.navigate('StoryDetail', { postId: item.id })}
             >
                 <View style={styles.postContainer}>
-                    {item.isPremium && (
+                    {/* {item.isPremium && (
                         <View style={styles.premiumBadge}>
                             <ThemedText style={styles.premiumText}>PREMIUM</ThemedText>
                         </View>
-                    )}
+                    )} */}
 
                     <View style={styles.postHeader}>
                         <View style={styles.headerLeft}>
@@ -744,7 +744,7 @@ export default function PostsList() {
                             <View style={styles.headerText}>
                                 <View style={styles.titleRow}>
                                     <ThemedText style={styles.postTitle}>{item.title}</ThemedText>
-                                    <ThemedText style={styles.timeAgo}> · {item.timeAgo}</ThemedText>
+                                    <ThemedText style={styles.timeAgo}>{item.timeAgo}</ThemedText>
                                 </View>
                             </View>
                         </View>
@@ -781,7 +781,7 @@ export default function PostsList() {
                             style={styles.actionButton}
                             onPress={() => handleShare(item)}
                         >
-                            <FontAwesome6 name="share-from-square" size={24} color="black" />
+                            <FontAwesome6 name="share-from-square" size={18} color="black" />
                             {/* <ThemedText style={styles.actionText}>{item.shareCount}</ThemedText> */}
                         </TouchableOpacity>
                     </View>
@@ -978,7 +978,7 @@ const styles = StyleSheet.create({
     headerLeft: { flexDirection: 'row', alignItems: 'center' },
     avatar: { width: 44, height: 44, borderRadius: 22, marginRight: 12, borderWidth: 1, borderColor: '#F0F0F0' },
     headerText: {},
-    titleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
+    titleRow: { flexDirection: 'column', flexWrap: 'wrap' },
     postTitle: { fontSize: 16, fontWeight: '400', fontFamily: 'CoFoRaffineMedium', color: '#000' },
     timeAgo: { fontSize: 14, fontFamily: 'tenez', color: '#999' },
     contentSection: { marginBottom: 12 },
