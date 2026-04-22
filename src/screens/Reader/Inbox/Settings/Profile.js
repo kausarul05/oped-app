@@ -2,9 +2,11 @@ import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useRole } from '@/src/context/RoleContext';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Image,
     ScrollView,
@@ -13,17 +15,54 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import authService from '../../../../services/authService';
 
 export default function Profile({ navigation }) {
     const { colors } = useTheme();
     const { clearUserRole } = useRole();
     const [profileImage, setProfileImage] = useState(null);
+    const [user, setUser] = useState({
+        name: '',
+        email: '',
+    });
+    const [loading, setLoading] = useState(true);
+    const [updatingImage, setUpdatingImage] = useState(false);
 
-    // User data
-    const user = {
-        name: 'Eric Lach',
-        email: 'eric.lach@example.com',
+    // Fetch user profile data
+    const fetchUserProfile = async () => {
+        try {
+            const result = await authService.getReaderProfile();
+            
+            if (result.success && result.data) {
+                const profile = result.data;
+                setUser({
+                    name: profile.name || '',
+                    email: profile.email || '',
+                });
+                if (profile.profileImage) {
+                    setProfileImage(profile.profileImage);
+                }
+            } else {
+                // Try to get from AsyncStorage as fallback
+                const userDataString = await AsyncStorage.getItem('userData');
+                if (userDataString) {
+                    const userData = JSON.parse(userDataString);
+                    setUser({
+                        name: userData.data?.name || userData.name || '',
+                        email: userData.data?.email || userData.email || '',
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+        } finally {
+            setLoading(false);
+        }
     };
+
+    useEffect(() => {
+        fetchUserProfile();
+    }, []);
 
     const handleLogout = () => {
         Alert.alert(
@@ -35,11 +74,15 @@ export default function Profile({ navigation }) {
                     text: 'Logout', 
                     onPress: async () => {
                         try {
-                            // Clear user role from AsyncStorage
+                            // Clear all auth data
+                            await AsyncStorage.removeItem('authToken');
+                            await AsyncStorage.removeItem('userData');
+                            await AsyncStorage.removeItem('userRole');
+                            
+                            // Clear user role from context
                             await clearUserRole();
                             
                             // Navigate to Login screen
-                            // We need to reset the navigation stack to Auth
                             navigation.reset({
                                 index: 0,
                                 routes: [{ name: 'login' }],
@@ -73,13 +116,56 @@ export default function Profile({ navigation }) {
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             aspect: [1, 1],
-            quality: 1,
+            quality: 0.8,
         });
 
         if (!result.canceled) {
-            setProfileImage(result.assets[0].uri);
+            await uploadProfileImage(result.assets[0].uri);
         }
     };
+
+    const uploadProfileImage = async (imageUri) => {
+        setUpdatingImage(true);
+        
+        try {
+            // Create form data for multipart upload
+            const formData = new FormData();
+            
+            const filename = imageUri.split('/').pop();
+            const match = /\.(\w+)$/.exec(filename);
+            const type = match ? `image/${match[1]}` : 'image/jpeg';
+            
+            formData.append('profileImage', {
+                uri: imageUri,
+                name: filename,
+                type: type,
+            });
+
+            const result = await authService.updateReaderProfile(formData);
+
+            if (result.success) {
+                setProfileImage(imageUri);
+                Alert.alert('Success', 'Profile picture updated successfully!');
+                // Refresh profile data
+                fetchUserProfile();
+            } else {
+                Alert.alert('Error', result.error || 'Failed to update profile picture');
+            }
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            Alert.alert('Error', 'Failed to upload profile picture');
+        } finally {
+            setUpdatingImage(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <ThemedView style={[styles.container, styles.centerContainer]}>
+                <ActivityIndicator size="large" color="#4B59B3" />
+            </ThemedView>
+        );
+    }
 
     return (
         <ThemedView style={styles.container}>
@@ -94,15 +180,23 @@ export default function Profile({ navigation }) {
                 </View>
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                    {/* Profile Section - No Cover Photo */}
+                    {/* Profile Section */}
                     <View style={styles.profileContainer}>
                         <View style={styles.profileImageContainer}>
                             <Image 
                                 source={profileImage ? { uri: profileImage } : { uri: 'https://t4.ftcdn.net/jpg/06/08/55/73/360_F_608557356_ELcD2pwQO9pduTRL30umabzgJoQn5fnd.jpg' }} 
                                 style={styles.profileImage} 
                             />
-                            <TouchableOpacity style={styles.addPhotoButton} onPress={pickImage}>
-                                <Ionicons name="camera" size={20} color="#FFFFFF" />
+                            <TouchableOpacity 
+                                style={styles.addPhotoButton} 
+                                onPress={pickImage}
+                                disabled={updatingImage}
+                            >
+                                {updatingImage ? (
+                                    <ActivityIndicator size="small" color="#FFFFFF" />
+                                ) : (
+                                    <Ionicons name="camera" size={20} color="#FFFFFF" />
+                                )}
                             </TouchableOpacity>
                         </View>
                         <View style={styles.profileInfo}>
@@ -221,6 +315,10 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: '#FFFFFF',
+    },
+    centerContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     header: {
         flexDirection: 'row',

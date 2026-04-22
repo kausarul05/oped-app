@@ -12,6 +12,7 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import authService from '../../../../services/authService';
 
 export default function ChangePassword({ navigation }) {
     const { colors } = useTheme();
@@ -25,7 +26,7 @@ export default function ChangePassword({ navigation }) {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    const handleConfirmChanges = () => {
+    const handleConfirmChanges = async () => {
         // Validate form
         if (!oldPassword || !newPassword || !confirmPassword) {
             Alert.alert('Error', 'Please fill in all fields');
@@ -42,14 +43,35 @@ export default function ChangePassword({ navigation }) {
             return;
         }
 
+        if (oldPassword === newPassword) {
+            Alert.alert('Error', 'New password cannot be the same as old password');
+            return;
+        }
+
         setLoading(true);
-        
-        // Simulate API call
-        setTimeout(() => {
+
+        try {
+            const result = await authService.readerChangePassword({
+                oldPassword: oldPassword,
+                newPassword: newPassword,
+            });
+
+            if (result.success) {
+                Alert.alert('Success', 'Password changed successfully!');
+                // Clear form
+                setOldPassword('');
+                setNewPassword('');
+                setConfirmPassword('');
+                navigation.goBack();
+            } else {
+                Alert.alert('Error', result.error || 'Failed to change password');
+            }
+        } catch (error) {
+            console.error('Error changing password:', error);
+            Alert.alert('Error', 'Failed to change password. Please try again.');
+        } finally {
             setLoading(false);
-            Alert.alert('Success', 'Password changed successfully!');
-            navigation.goBack();
-        }, 2000);
+        }
     };
 
     return (
@@ -76,7 +98,7 @@ export default function ChangePassword({ navigation }) {
                             <View style={styles.passwordContainer}>
                                 <TextInput
                                     style={styles.passwordInput}
-                                    placeholder="**********"
+                                    placeholder="Enter your old password"
                                     placeholderTextColor="#999"
                                     value={oldPassword}
                                     onChangeText={setOldPassword}
@@ -101,7 +123,7 @@ export default function ChangePassword({ navigation }) {
                             <View style={styles.passwordContainer}>
                                 <TextInput
                                     style={styles.passwordInput}
-                                    placeholder="**********"
+                                    placeholder="Enter new password (min 6 characters)"
                                     placeholderTextColor="#999"
                                     value={newPassword}
                                     onChangeText={setNewPassword}
@@ -126,7 +148,7 @@ export default function ChangePassword({ navigation }) {
                             <View style={styles.passwordContainer}>
                                 <TextInput
                                     style={styles.passwordInput}
-                                    placeholder="**********"
+                                    placeholder="Confirm your new password"
                                     placeholderTextColor="#999"
                                     value={confirmPassword}
                                     onChangeText={setConfirmPassword}
@@ -142,6 +164,35 @@ export default function ChangePassword({ navigation }) {
                                         color="#999" 
                                     />
                                 </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {/* Password Requirements */}
+                        <View style={styles.requirementsContainer}>
+                            <ThemedText style={styles.requirementsTitle}>Password Requirements:</ThemedText>
+                            <View style={styles.requirementItem}>
+                                <Ionicons 
+                                    name={newPassword.length >= 6 ? "checkmark-circle" : "ellipse-outline"} 
+                                    size={16} 
+                                    color={newPassword.length >= 6 ? "#4B59B3" : "#999"} 
+                                />
+                                <ThemedText style={styles.requirementText}>At least 6 characters</ThemedText>
+                            </View>
+                            <View style={styles.requirementItem}>
+                                <Ionicons 
+                                    name={newPassword !== oldPassword && newPassword ? "checkmark-circle" : "ellipse-outline"} 
+                                    size={16} 
+                                    color={newPassword !== oldPassword && newPassword ? "#4B59B3" : "#999"} 
+                                />
+                                <ThemedText style={styles.requirementText}>Different from old password</ThemedText>
+                            </View>
+                            <View style={styles.requirementItem}>
+                                <Ionicons 
+                                    name={newPassword === confirmPassword && confirmPassword ? "checkmark-circle" : "ellipse-outline"} 
+                                    size={16} 
+                                    color={newPassword === confirmPassword && confirmPassword ? "#4B59B3" : "#999"} 
+                                />
+                                <ThemedText style={styles.requirementText}>Passwords match</ThemedText>
                             </View>
                         </View>
                     </View>
@@ -229,6 +280,30 @@ const styles = StyleSheet.create({
     eyeIcon: {
         paddingHorizontal: 16,
         paddingVertical: 14,
+    },
+    requirementsContainer: {
+        marginTop: 8,
+        padding: 16,
+        backgroundColor: '#F8F9FA',
+        borderRadius: 12,
+        gap: 8,
+    },
+    requirementsTitle: {
+        fontSize: 14,
+        fontWeight: '500',
+        fontFamily: 'CoFoRaffineMedium',
+        color: '#666',
+        marginBottom: 4,
+    },
+    requirementItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    requirementText: {
+        fontSize: 12,
+        fontFamily: 'tenez',
+        color: '#666',
     },
     confirmButton: {
         paddingHorizontal: 16,

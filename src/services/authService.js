@@ -251,6 +251,27 @@ const authService = {
             return { success: false, error: error.response?.data?.message || error.message };
         }
     },
+
+    // Change Password
+    readerChangePassword: async (passwordData) => {
+        try {
+            const token = await AsyncStorage.getItem('authToken');
+            const response = await api.patch('/api/v1/reader/profile/change-password', {
+                oldPassword: passwordData.oldPassword,
+                newPassword: passwordData.newPassword,
+            }, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
+
+            if (response.data && response.data.success) {
+                return { success: true, data: response.data };
+            }
+            return { success: false, error: response.data?.message || 'Failed to change password' };
+        } catch (error) {
+            console.error('Change password error:', error);
+            return { success: false, error: error.response?.data?.message || error.message };
+        }
+    },
 };
 
 export default authService;
