@@ -226,7 +226,7 @@ export default function ReaderSlider() {
         }));
 
         try {
-            const result = await libraryService.toggleSaved({
+            const result = await libraryService.toggleSave({
                 contentType: 'story',
                 contentId: id,
                 listType: 'saved'

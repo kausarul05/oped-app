@@ -17,6 +17,7 @@ import {
     View
 } from 'react-native';
 import commentService from '../../../services/commentService';
+import libraryService from '../../../services/libraryService';
 import reactionService from '../../../services/reactionService';
 import storyService from '../../../services/storyService';
 
@@ -25,7 +26,7 @@ export default function PostsList() {
     const [likedPosts, setLikedPosts] = useState({});
     const [likeCounts, setLikeCounts] = useState({});
     const [commentCounts, setCommentCounts] = useState({});
-    const [menuVisible, setMenuVisible] = useState(null);
+    const [menuVisible, setMenuVisible] = useState(false);
     const [selectedPost, setSelectedPost] = useState(null);
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -33,6 +34,7 @@ export default function PostsList() {
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [currentUserId, setCurrentUserId] = useState(null);
+    const [savingPost, setSavingPost] = useState(false);
 
     // Comment Modal States
     const [commentModalVisible, setCommentModalVisible] = useState(false);
@@ -58,10 +60,7 @@ export default function PostsList() {
                 
                 if (userDataString) {
                     const userData = JSON.parse(userDataString);
-                    // console.log('Parsed userData:', userData);
                     
-                    // Extract user ID from the nested structure
-                    // The structure is: { success: true, message: "...", data: { id: "...", ... } }
                     let userId = null;
                     
                     if (userData.data?.id) {
@@ -72,7 +71,6 @@ export default function PostsList() {
                         userId = userData._id;
                     }
                     
-                    // console.log('Extracted User ID:', userId);
                     setCurrentUserId(userId);
                 }
             } catch (error) {
@@ -81,18 +79,6 @@ export default function PostsList() {
         };
         getCurrentUser();
     }, []);
-
-    // Also try to get from login response when needed
-    const saveUserDataFromLogin = async (loginResponse) => {
-        try {
-            if (loginResponse?.data?.id) {
-                setCurrentUserId(loginResponse.data.id);
-                await AsyncStorage.setItem('userData', JSON.stringify(loginResponse));
-            }
-        } catch (error) {
-            console.error('Error saving user data:', error);
-        }
-    };
 
     // Fetch posts from API
     const fetchPosts = async (pageNum = 1, isLoadMore = false) => {
@@ -243,16 +229,16 @@ export default function PostsList() {
 
         try {
             if (!isCurrentlyLiked) {
-                console.log("story", id, "like")
+                // console.log("story", id, "like")
                 const result = await reactionService.addReaction('story', id, 'like');
-                console.log("result", result)
+                // console.log("result", result)
                 if (!result.success) {
                     setLikedPosts(prev => ({ ...prev, [id]: isCurrentlyLiked }));
                     setLikeCounts(prev => ({ ...prev, [id]: currentLikeCount }));
                     Alert.alert('Error', 'Failed to like the post');
                 }
             } else {
-                const result = await reactionService.removeReaction('story', id);
+                const result = await reactionService.addReaction('story', id, 'like');
                 if (!result.success) {
                     setLikedPosts(prev => ({ ...prev, [id]: isCurrentlyLiked }));
                     setLikeCounts(prev => ({ ...prev, [id]: currentLikeCount }));
@@ -270,7 +256,7 @@ export default function PostsList() {
         try {
             const shareUrl = `https://hoped.com/story/${post.id}`;
             const result = await Share.share({
-                message: `${post.headline}\n\nRead more: ${shareUrl}\n\nShared via HOPED App`,
+                message: `${shareUrl}`,
                 title: 'Share Article',
                 url: shareUrl
             });
@@ -280,6 +266,56 @@ export default function PostsList() {
             }
         } catch (error) {
             console.log('Error sharing:', error);
+        }
+    };
+
+    // Save/Unsave Post Function
+    const handleSavePost = async (postId) => {
+        if (savingPost) return;
+        
+        setSavingPost(true);
+        try {
+            const result = await libraryService.toggleSave({
+                contentType: 'story',
+                contentId: postId,
+                listType: 'saved'
+            });
+            
+            if (result.success) {
+                Alert.alert('Success', result.message || 'Post saved to library!');
+                setMenuVisible(false);
+                setSelectedPost(null);
+            } else {
+                Alert.alert('Error', result.error || 'Failed to save post');
+            }
+        } catch (error) {
+            console.error('Error saving post:', error);
+            Alert.alert('Error', 'Failed to save post');
+        } finally {
+            setSavingPost(false);
+        }
+    };
+
+    const handleThreeDotPress = (post) => {
+        setSelectedPost(post);
+        setMenuVisible(true);
+    };
+
+    const handleMenuOption = (option, post) => {
+        setMenuVisible(false);
+        switch (option) {
+            case 'save':
+                handleSavePost(post.id);
+                break;
+            case 'report':
+                Alert.alert('Report', 'Thank you for reporting. We will review this post.');
+                break;
+            case 'hide':
+                Alert.alert('Hide', 'This post will be hidden from your feed.');
+                break;
+            case 'notInterested':
+                Alert.alert('Not Interested', 'We will show fewer posts like this.');
+                break;
         }
     };
 
@@ -301,15 +337,12 @@ export default function PostsList() {
 
             if (result.success && result.data) {
                 const formattedComments = result.data.map(comment => {
-                    // Get author ID - could be object or string
                     let authorId = null;
                     if (comment.author?._id) {
                         authorId = comment.author._id;
                     } else if (comment.author) {
                         authorId = comment.author;
                     }
-                    
-                    console.log(`Comment ${comment._id} - Author ID: ${authorId}, Current User ID: ${currentUserId}`);
                     
                     return {
                         id: comment._id,
@@ -577,32 +610,7 @@ export default function PostsList() {
         }
     };
 
-    const handleThreeDotPress = (postId) => {
-        setSelectedPost(postId);
-        setMenuVisible(true);
-    };
-
-    const handleMenuOption = (option) => {
-        setMenuVisible(false);
-        switch (option) {
-            case 'report':
-                Alert.alert('Report', 'Thank you for reporting. We will review this post.');
-                break;
-            case 'hide':
-                Alert.alert('Hide', 'This post will be hidden from your feed.');
-                break;
-            case 'save':
-                Alert.alert('Save', 'Post saved to bookmarks!');
-                break;
-            case 'notInterested':
-                Alert.alert('Not Interested', 'We will show fewer posts like this.');
-                break;
-        }
-    };
-
     const renderComment = ({ item }) => {
-        console.log(`Rendering comment ${item.id} - isOwnComment: ${item.isOwnComment}, CurrentUserId: ${currentUserId}`);
-        
         return (
             <View style={styles.commentItem}>
                 <Image source={{ uri: item.authorImage }} style={styles.commentAvatar} />
@@ -649,7 +657,6 @@ export default function PostsList() {
                             <ThemedText style={styles.commentActionText}>Reply</ThemedText>
                         </TouchableOpacity>
 
-                        {/* Only show delete button for user's own comments */}
                         {item.isOwnComment === true && currentUserId !== null && (
                             <TouchableOpacity onPress={() => handleDeleteComment(item.id)}>
                                 <Ionicons name="trash-outline" size={16} color="#FF3B30" />
@@ -741,7 +748,7 @@ export default function PostsList() {
                                 </View>
                             </View>
                         </View>
-                        <TouchableOpacity onPress={() => handleThreeDotPress(item.id)}>
+                        <TouchableOpacity onPress={() => handleThreeDotPress(item)}>
                             <Ionicons name="ellipsis-horizontal" size={20} color="#666" />
                         </TouchableOpacity>
                     </View>
@@ -775,7 +782,7 @@ export default function PostsList() {
                             onPress={() => handleShare(item)}
                         >
                             <FontAwesome6 name="share-from-square" size={24} color="black" />
-                            <ThemedText style={styles.actionText}>{item.shareCount}</ThemedText>
+                            {/* <ThemedText style={styles.actionText}>{item.shareCount}</ThemedText> */}
                         </TouchableOpacity>
                     </View>
 
@@ -922,25 +929,25 @@ export default function PostsList() {
                     onPress={() => setMenuVisible(false)}
                 >
                     <View style={styles.menuContainer}>
-                        <TouchableOpacity style={styles.menuItem} onPress={() => handleMenuOption('save')}>
-                            <Ionicons name="bookmark-outline" size={20} color="#000" />
-                            <ThemedText style={styles.menuText}>Save Post</ThemedText>
+                        <TouchableOpacity 
+                            style={styles.menuItem} 
+                            onPress={() => handleMenuOption('save', selectedPost)}
+                            disabled={savingPost}
+                        >
+                            {savingPost ? (
+                                <ActivityIndicator size="small" color="#4B59B3" />
+                            ) : (
+                                <>
+                                    <Ionicons name="bookmark-outline" size={20} color="#000" />
+                                    <ThemedText style={styles.menuText}>Save Post</ThemedText>
+                                </>
+                            )}
                         </TouchableOpacity>
-                        <View style={styles.menuDivider} />
-                        <TouchableOpacity style={styles.menuItem} onPress={() => handleMenuOption('hide')}>
-                            <Ionicons name="eye-off-outline" size={20} color="#000" />
-                            <ThemedText style={styles.menuText}>Hide Post</ThemedText>
-                        </TouchableOpacity>
-                        <View style={styles.menuDivider} />
-                        <TouchableOpacity style={styles.menuItem} onPress={() => handleMenuOption('notInterested')}>
+                        {/* <View style={styles.menuDivider} /> */}
+                        {/* <TouchableOpacity style={styles.menuItem} onPress={() => handleMenuOption('notInterested', selectedPost)}>
                             <Ionicons name="thumbs-down-outline" size={20} color="#000" />
                             <ThemedText style={styles.menuText}>Not Interested</ThemedText>
-                        </TouchableOpacity>
-                        <View style={styles.menuDivider} />
-                        <TouchableOpacity style={[styles.menuItem, styles.reportItem]} onPress={() => handleMenuOption('report')}>
-                            <Ionicons name="flag-outline" size={20} color="#FF3B30" />
-                            <ThemedText style={[styles.menuText, styles.reportText]}>Report Post</ThemedText>
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
                     </View>
                 </TouchableOpacity>
             </Modal>
