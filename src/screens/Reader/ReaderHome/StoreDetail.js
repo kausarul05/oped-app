@@ -1,5 +1,6 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
+import libraryService from '@/src/services/libraryService';
 import { FontAwesome6, Foundation, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
@@ -82,7 +83,7 @@ export default function StoryDetail({ route, navigation }) {
             const result = await storyService.getStoryById(postId);
             if (result.data) {
                 const storyData = result.data?.data;
-                
+
                 // Get like status
                 let likeStatus = false;
                 let totalLikes = storyData.likes || 0;
@@ -95,7 +96,7 @@ export default function StoryDetail({ route, navigation }) {
                 } catch (error) {
                     console.error('Error fetching reactions:', error);
                 }
-                
+
                 setStory({
                     id: storyData._id,
                     authorName: storyData.author?.name || 'Unknown Author',
@@ -138,7 +139,7 @@ export default function StoryDetail({ route, navigation }) {
                     } else if (comment.author) {
                         authorId = comment.author;
                     }
-                    
+
                     return {
                         id: comment._id,
                         content: comment.content,
@@ -283,10 +284,18 @@ export default function StoryDetail({ route, navigation }) {
         setBookmarked(newState);
 
         if (newState) {
-            await storyService.bookmarkStory(story.id);
+            await libraryService.toggleSave({
+                contentType: 'story',
+                contentId: postId,
+                listType: 'saved'
+            });
             Alert.alert('Saved', 'Story bookmarked successfully!');
         } else {
-            await storyService.unbookmarkStory(story.id);
+            await libraryService.toggleSave({
+                contentType: 'story',
+                contentId: postId,
+                listType: 'saved'
+            });
             Alert.alert('Removed', 'Bookmark removed');
         }
     };
@@ -295,7 +304,7 @@ export default function StoryDetail({ route, navigation }) {
         try {
             const shareUrl = `https://hoped.com/story/${story.id}`;
             await Share.share({
-                message: `${story?.headline}\n\nRead more: ${shareUrl}\n\nShared via HOPED App`,
+                message: `${shareUrl}`,
                 title: 'Share Story',
                 url: shareUrl
             });
@@ -569,9 +578,9 @@ export default function StoryDetail({ route, navigation }) {
                         <TouchableOpacity onPress={handleShare} style={styles.headerAction}>
                             <FontAwesome6 name="share-from-square" size={22} color="#000" />
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.headerAction}>
+                        {/* <TouchableOpacity style={styles.headerAction}>
                             <Ionicons name="ellipsis-horizontal" size={24} color="#000" />
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
                     </View>
                 </View>
 
@@ -627,12 +636,12 @@ export default function StoryDetail({ route, navigation }) {
 
                         <TouchableOpacity style={styles.storyActionButton}>
                             <MaterialCommunityIcons name="message-text-outline" size={22} color="#666" />
-                            <ThemedText style={styles.storyActionText}>{story.commentCount}</ThemedText>
+                            <ThemedText style={styles.storyActionText}>({comments.length})</ThemedText>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.storyActionButton} onPress={handleShare}>
                             <FontAwesome6 name="share-from-square" size={20} color="#666" />
-                            <ThemedText style={styles.storyActionText}>{story.shareCount}</ThemedText>
+                            {/* <ThemedText style={styles.storyActionText}>{story.shareCount}</ThemedText> */}
                         </TouchableOpacity>
                     </View>
 
