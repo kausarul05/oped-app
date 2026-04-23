@@ -3,7 +3,7 @@ import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
-import { Image, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ReaderNavbar() {
@@ -11,8 +11,6 @@ export default function ReaderNavbar() {
     const navigation = useNavigation();
     const [selectedCategory, setSelectedCategory] = useState('Explore');
     const [currentDate, setCurrentDate] = useState('');
-    const [searchModalVisible, setSearchModalVisible] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
 
     const categories = [
         { id: 1, name: 'Explore', icon: 'compass-outline', route: 'ReaderHome', categoryParam: null },
@@ -23,7 +21,6 @@ export default function ReaderNavbar() {
         { id: 6, name: 'Culture', icon: 'color-palette-outline', route: 'CategoryStories', categoryParam: 'culture' },
         { id: 7, name: 'Travel', icon: 'airplane-outline', route: 'CategoryStories', categoryParam: 'travel' },
         { id: 8, name: 'Gastronomy', icon: 'restaurant-outline', route: 'CategoryStories', categoryParam: 'gastronomy' },
-        // { id: 9, name: 'Podcasts', icon: 'mic-outline', route: 'PodcastHome', categoryParam: null },
         { id: 10, name: 'Live News', icon: 'radio-outline', route: 'LiveNews', categoryParam: null },
     ];
 
@@ -51,7 +48,6 @@ export default function ReaderNavbar() {
         if (category.route === 'ReaderHome') {
             navigation.navigate('ReaderHome');
         } else if (category.route === 'CategoryStories') {
-            // Navigate to CategoryStories with the category parameter
             navigation.navigate('CategoryStories', { 
                 category: category.name,
                 categoryId: category.categoryParam 
@@ -63,11 +59,8 @@ export default function ReaderNavbar() {
         }
     };
 
-    const handleSearch = () => {
-        if (searchQuery.trim()) {
-            setSearchModalVisible(false);
-            navigation.navigate('SearchResults', { query: searchQuery });
-        }
+    const handleNotificationPress = () => {
+        navigation.navigate('Notifications');
     };
 
     return (
@@ -89,13 +82,13 @@ export default function ReaderNavbar() {
                         <ThemedText style={styles.date}>{currentDate}</ThemedText>
                     </View>
 
-                    {/* Right Side - Search Icon */}
+                    {/* Right Side - Notification Icon */}
                     <View style={styles.rightContainer}>
                         <TouchableOpacity 
-                            style={styles.searchButton}
-                            onPress={() => setSearchModalVisible(true)}
+                            style={styles.notificationButton}
+                            onPress={handleNotificationPress}
                         >
-                            <Ionicons name="search-outline" size={28} color={colors.text} />
+                            <Ionicons name="notifications-outline" size={28} color={colors.text} />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -139,101 +132,6 @@ export default function ReaderNavbar() {
                     </ScrollView>
                 </View>
             </SafeAreaView>
-
-            {/* Search Modal */}
-            <Modal
-                animationType="slide"
-                transparent={false}
-                visible={searchModalVisible}
-                onRequestClose={() => setSearchModalVisible(false)}
-            >
-                <ThemedView style={styles.modalContainer}>
-                    <SafeAreaView style={styles.modalSafeArea}>
-                        {/* Modal Header */}
-                        <View style={styles.modalHeader}>
-                            <TouchableOpacity 
-                                onPress={() => setSearchModalVisible(false)}
-                                style={styles.modalBackButton}
-                            >
-                                <Ionicons name="arrow-back" size={24} color={colors.text} />
-                            </TouchableOpacity>
-                            <ThemedText style={styles.modalTitle}>Search</ThemedText>
-                            <View style={{ width: 40 }} />
-                        </View>
-
-                        {/* Search Input */}
-                        <View style={styles.searchInputContainer}>
-                            <Ionicons name="search-outline" size={20} color={colors.textSecondary} style={styles.searchInputIcon} />
-                            <TextInput
-                                style={[
-                                    styles.searchInput,
-                                    {
-                                        color: colors.text,
-                                        borderColor: colors.border,
-                                        backgroundColor: colors.inputBackground,
-                                    }
-                                ]}
-                                placeholder="Search articles, topics..."
-                                placeholderTextColor={colors.textTertiary}
-                                value={searchQuery}
-                                onChangeText={setSearchQuery}
-                                autoFocus={true}
-                                returnKeyType="search"
-                                onSubmitEditing={handleSearch}
-                            />
-                            {searchQuery.length > 0 && (
-                                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                                    <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
-                                </TouchableOpacity>
-                            )}
-                        </View>
-
-                        {/* Recent Searches or Suggestions */}
-                        <View style={styles.recentContainer}>
-                            <ThemedText style={styles.recentTitle}>Recent Searches</ThemedText>
-                            
-                            {['Technology', 'World News', 'Economy'].map((item, index) => (
-                                <TouchableOpacity 
-                                    key={index}
-                                    style={styles.recentItem}
-                                    onPress={() => {
-                                        setSearchQuery(item);
-                                        setTimeout(() => {
-                                            setSearchModalVisible(false);
-                                            navigation.navigate('SearchResults', { query: item });
-                                        }, 300);
-                                    }}
-                                >
-                                    <Ionicons name="time-outline" size={18} color={colors.textSecondary} />
-                                    <ThemedText style={styles.recentItemText}>{item}</ThemedText>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-
-                        {/* Popular Topics */}
-                        <View style={styles.popularContainer}>
-                            <ThemedText style={styles.popularTitle}>Popular Topics</ThemedText>
-                            <View style={styles.popularTags}>
-                                {['Breaking News', 'Trending', 'Latest', 'Editor\'s Pick'].map((tag, index) => (
-                                    <TouchableOpacity 
-                                        key={index}
-                                        style={[styles.popularTag, { borderColor: colors.border }]}
-                                        onPress={() => {
-                                            setSearchQuery(tag);
-                                            setTimeout(() => {
-                                                setSearchModalVisible(false);
-                                                navigation.navigate('SearchResults', { query: tag });
-                                            }, 300);
-                                        }}
-                                    >
-                                        <ThemedText style={styles.popularTagText}>{tag}</ThemedText>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-                    </SafeAreaView>
-                </ThemedView>
-            </Modal>
         </ThemedView>
     );
 }
@@ -275,7 +173,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    searchButton: {
+    notificationButton: {
         width: 44,
         height: 44,
         borderRadius: 22,
@@ -316,95 +214,5 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         fontFamily: 'CoFoRaffineMedium',
         letterSpacing: 0.5,
-    },
-    // Modal Styles
-    modalContainer: {
-        flex: 1,
-    },
-    modalSafeArea: {
-        flex: 1,
-        paddingHorizontal: 20,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#0000001A',
-    },
-    modalBackButton: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        fontFamily: 'CoFoRaffineBold',
-    },
-    searchInputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 20,
-        marginBottom: 30,
-    },
-    searchInputIcon: {
-        position: 'absolute',
-        left: 12,
-        zIndex: 1,
-    },
-    searchInput: {
-        flex: 1,
-        height: 50,
-        borderWidth: 1,
-        borderRadius: 25,
-        paddingHorizontal: 40,
-        fontSize: 16,
-        fontFamily: 'CoFoRaffineMedium',
-    },
-    recentContainer: {
-        marginBottom: 30,
-    },
-    recentTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        fontFamily: 'CoFoRaffineBold',
-        marginBottom: 16,
-    },
-    recentItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        gap: 12,
-    },
-    recentItemText: {
-        fontSize: 15,
-        fontFamily: 'CoFoRaffineMedium',
-    },
-    popularContainer: {
-        marginBottom: 30,
-    },
-    popularTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        fontFamily: 'CoFoRaffineBold',
-        marginBottom: 16,
-    },
-    popularTags: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 10,
-    },
-    popularTag: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderWidth: 1,
-        borderRadius: 20,
-    },
-    popularTagText: {
-        fontSize: 14,
-        fontFamily: 'CoFoRaffineMedium',
     },
 });

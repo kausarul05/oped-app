@@ -1,7 +1,10 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     FlatList,
     Image,
     StyleSheet,
@@ -9,47 +12,152 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import libraryService from '../../../services/libraryService';
 
 export default function Library({ navigation }) {
     const { colors } = useTheme();
+    const [recentlyReadItems, setRecentlyReadItems] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [currentUserId, setCurrentUserId] = useState(null);
 
-    // Recently Read data
-    const recentlyReadItems = [
-        {
-            id: '1',
-            title: 'The Future of Digital Media and the Changing Voice of Independent Journalists',
-            date: '20 January',
-            type: 'Story',
-            image: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-        {
-            id: '2',
-            title: 'The Future of Digital Media and the Changing Voice of Independent Journalists',
-            date: '20 January',
-            type: 'History',
-            image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-        {
-            id: '3',
-            title: 'The Future of Digital Media and the Changing Voice of Independent Journalists',
-            date: '20 January',
-            type: 'Story',
-            image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-        },
-    ];
+    // Get current user ID from storage
+    useEffect(() => {
+        const getCurrentUser = async () => {
+            try {
+                const userDataString = await AsyncStorage.getItem('userData');
+                if (userDataString) {
+                    const userData = JSON.parse(userDataString);
+                    let userId = null;
+                    if (userData.data?.id) {
+                        userId = userData.data.id;
+                    } else if (userData.id) {
+                        userId = userData.id;
+                    } else if (userData._id) {
+                        userId = userData._id;
+                    }
+                    setCurrentUserId(userId);
+                }
+            } catch (error) {
+                console.error('Error getting current user:', error);
+            }
+        };
+        getCurrentUser();
+    }, []);
+
+    // Fetch recently read items (Read Later items)
+    const fetchRecentlyRead = async () => {
+        try {
+            // Fetch both stories and podcasts from read later
+            const [storiesResult, podcastsResult] = await Promise.all([
+                libraryService.getReadLaterItems('story', 1, 10),
+                libraryService.getReadLaterItems('podcast', 1, 10)
+            ]);
+            
+            let allItems = [];
+            
+            // Process stories
+            if (storiesResult.success && storiesResult.data) {
+                const formattedStories = storiesResult.data.map(item => ({
+                    id: item.libraryId,
+                    contentId: item.content._id,
+                    title: item.content.title,
+                    date: formatDate(item.savedAt),
+                    type: 'Story',
+                    image: item.content.coverImage,
+                    isPremium: item.content.isPremium,
+                    contentType: 'story',
+                    author: item.content.author?.name,
+                }));
+                allItems.push(...formattedStories);
+            }
+            
+            // Process podcasts
+            if (podcastsResult.success && podcastsResult.data) {
+                const formattedPodcasts = podcastsResult.data.map(item => ({
+                    id: item.libraryId,
+                    contentId: item.content._id,
+                    title: item.content.title,
+                    date: formatDate(item.savedAt),
+                    type: 'Podcast',
+                    image: item.content.coverImage,
+                    isPremium: item.content.isPremium,
+                    contentType: 'podcast',
+                    author: item.content.author?.name,
+                    duration: item.content.audioDuration,
+                }));
+                allItems.push(...formattedPodcasts);
+            }
+            
+            // Sort by saved date (newest first) and take first 5
+            allItems.sort((a, b) => new Date(b.date) - new Date(a.date));
+            const recentItems = allItems.slice(0, 5);
+            
+            setRecentlyReadItems(recentItems);
+        } catch (error) {
+            console.error('Error fetching recently read:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
+    };
+
+    useEffect(() => {
+        fetchRecentlyRead();
+    }, []);
+
+    const handleItemPress = (item) => {
+        if (item.contentType === 'story') {
+            navigation.navigate('StoryDetail', { storyId: item.contentId });
+        } else {
+            navigation.navigate('PodcastDetail', { podcastId: item.contentId });
+        }
+    };
 
     const renderLibraryItem = ({ item }) => (
-        <TouchableOpacity style={styles.libraryItem}>
+        <TouchableOpacity 
+            style={styles.libraryItem}
+            onPress={() => handleItemPress(item)}
+        >
             <Image source={{ uri: item.image }} style={styles.libraryImage} />
             <View style={styles.libraryContent}>
-                <ThemedText style={styles.libraryTitle}>{item.title}</ThemedText>
-                <ThemedText style={styles.libraryMeta}>{item.date} · {item.type}</ThemedText>
+                <View style={styles.libraryHeader}>
+                    <ThemedText style={styles.libraryTitle} numberOfLines={2}>
+                        {item.title}
+                    </ThemedText>
+                    {item.isPremium && (
+                        <View style={styles.premiumBadge}>
+                            <ThemedText style={styles.premiumText}>PREMIUM</ThemedText>
+                        </View>
+                    )}
+                </View>
+                <ThemedText style={styles.libraryMeta}>
+                    {item.date} · {item.type}
+                    {item.duration && ` · ${item.duration} min`}
+                </ThemedText>
+                {item.author && (
+                    <ThemedText style={styles.libraryAuthor}>
+                        By {item.author}
+                    </ThemedText>
+                )}
             </View>
-            {/* <TouchableOpacity style={styles.menuButton}>
-                <Ionicons name="ellipsis-vertical" size={16} color="#999" />
-            </TouchableOpacity> */}
         </TouchableOpacity>
     );
+
+    if (loading) {
+        return (
+            <ThemedView style={[styles.container, styles.centerContainer]}>
+                <ActivityIndicator size="large" color="#4B59B3" />
+            </ThemedView>
+        );
+    }
 
     return (
         <ThemedView style={styles.container}>
@@ -69,7 +177,7 @@ export default function Library({ navigation }) {
                         style={styles.tab}
                         onPress={() => navigation.navigate('ReadLater')}
                     >
-                        <Ionicons name="bookmark-outline" size={22} color="#0000" />
+                        <Ionicons name="bookmark-outline" size={22} color="#000" />
                         <ThemedText style={styles.tabText}>Read Later</ThemedText>
                     </TouchableOpacity>
 
@@ -77,7 +185,7 @@ export default function Library({ navigation }) {
                         style={[styles.tab, {backgroundColor: '#8E44AD1A'}]}
                         onPress={() => navigation.navigate('Saved')}
                     >
-                        <MaterialIcons name="save" size={22} color="black" />
+                        <MaterialIcons name="save" size={22} color="#000" />
                         <ThemedText style={styles.tabText}>Saved</ThemedText>
                     </TouchableOpacity>
                 </View>
@@ -86,13 +194,23 @@ export default function Library({ navigation }) {
                 <View style={styles.recentSection}>
                     <ThemedText style={styles.recentTitle}>Recently Read</ThemedText>
                     
-                    <FlatList
-                        data={recentlyReadItems}
-                        renderItem={renderLibraryItem}
-                        keyExtractor={(item) => item.id}
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={styles.listContent}
-                    />
+                    {recentlyReadItems.length > 0 ? (
+                        <FlatList
+                            data={recentlyReadItems}
+                            renderItem={renderLibraryItem}
+                            keyExtractor={(item) => item.id}
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={styles.listContent}
+                        />
+                    ) : (
+                        <View style={styles.emptyContainer}>
+                            <Ionicons name="bookmark-outline" size={48} color="#ccc" />
+                            <ThemedText style={styles.emptyText}>No recently read items</ThemedText>
+                            <ThemedText style={styles.emptySubText}>
+                                Items you save to "Read Later" will appear here
+                            </ThemedText>
+                        </View>
+                    )}
                 </View>
             </SafeAreaView>
         </ThemedView>
@@ -107,6 +225,10 @@ const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
         backgroundColor: '#FFFFFF',
+    },
+    centerContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     header: {
         flexDirection: 'row',
@@ -149,11 +271,6 @@ const styles = StyleSheet.create({
         borderColor: '#27AE601A',
         gap: 8,
         backgroundColor: '#27AE601A',
-        // elevation: 1,
-        // shadowColor: '#000',
-        // shadowOffset: { width: 0, height: 1 },
-        // shadowOpacity: 0.1,
-        // shadowRadius: 2,
     },
     tabText: {
         fontSize: 18,
@@ -180,12 +297,11 @@ const styles = StyleSheet.create({
     libraryItem: {
         flexDirection: 'row',
         gap: 12,
-        paddingVertical: 8,
+        paddingVertical: 12,
         borderBottomWidth: 1,
         borderBottomColor: '#F0F0F0',
         backgroundColor: '#fff',
-        alignItems: 'center',
-        elevation: 1,
+        alignItems: 'flex-start',
         padding: 4,
         borderRadius: 8,
     },
@@ -197,17 +313,60 @@ const styles = StyleSheet.create({
     libraryContent: {
         flex: 1,
     },
+    libraryHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        flexWrap: 'wrap',
+        marginBottom: 4,
+    },
     libraryTitle: {
         fontSize: 14,
-        fontFamily: 'tenez',
+        fontFamily: 'CoFoRaffineMedium',
         color: '#333',
-        marginBottom: 4,
+        flex: 1,
         lineHeight: 18,
     },
+    premiumBadge: {
+        backgroundColor: '#FF9500',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    premiumText: {
+        fontSize: 8,
+        fontWeight: 'bold',
+        color: '#FFF',
+        fontFamily: 'CoFoRaffineBold',
+    },
     libraryMeta: {
-        fontSize: 12,
+        fontSize: 11,
         fontFamily: 'tenez',
         color: '#999',
+        marginBottom: 2,
+    },
+    libraryAuthor: {
+        fontSize: 11,
+        fontFamily: 'tenez',
+        color: '#4B59B3',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 60,
+    },
+    emptyText: {
+        fontSize: 16,
+        fontFamily: 'CoFoRaffineMedium',
+        color: '#999',
+        marginTop: 12,
+    },
+    emptySubText: {
+        fontSize: 13,
+        fontFamily: 'tenez',
+        color: '#ccc',
+        marginTop: 4,
+        textAlign: 'center',
     },
     menuButton: {
         padding: 8,

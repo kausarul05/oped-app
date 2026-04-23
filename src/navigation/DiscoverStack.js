@@ -6,6 +6,7 @@ import DiscoverQuickLink from '../screens/Reader/ReaderHome/DiscoverQuickLink';
 import LiveNews from '../screens/Reader/ReaderHome/LiveNews';
 import ReaderHome from '../screens/Reader/ReaderHome/ReaderHome';
 import StoryDetail from '../screens/Reader/ReaderHome/StoreDetail';
+import Notifications from '../screens/Writer/WriterHome/Notifications';
 
 const Stack = createNativeStackNavigator();
 
@@ -25,6 +26,10 @@ export default function DiscoverStack() {
             <Stack.Screen
                 name="Subscription"
                 component={Subscription}
+            />
+            <Stack.Screen
+                name="Notifications"
+                component={Notifications}
             />
         </Stack.Navigator>
     );

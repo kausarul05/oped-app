@@ -65,8 +65,8 @@ export default function PodcastHome({ navigation }) {
             'This content is only available for premium subscribers. Would you like to subscribe to access all premium content?',
             [
                 { text: 'Maybe Later', style: 'cancel' },
-                { 
-                    text: 'Subscribe Now', 
+                {
+                    text: 'Subscribe Now',
                     onPress: () => navigation.navigate('Subscription')
                 }
             ]
@@ -236,6 +236,10 @@ export default function PodcastHome({ navigation }) {
         { type: 'topEpisodes', data: topEpisodes },
     ];
 
+    const handleNotificationPress = () => {
+        navigation.navigate('Notifications');
+    };
+
     const renderSection = ({ item }) => {
         if (item.type === 'expert') {
             return (
@@ -331,9 +335,14 @@ export default function PodcastHome({ navigation }) {
                         <ThemedText style={styles.headerTitle}>Podcasts</ThemedText>
                         <ThemedText style={styles.headerSubtitle}>Discover amazing content</ThemedText>
                     </View>
-                    <TouchableOpacity style={styles.searchButton}>
-                        <Ionicons name="search-outline" size={24} color="#000" />
-                    </TouchableOpacity>
+                    <View style={styles.rightContainer}>
+                        <TouchableOpacity
+                            style={styles.notificationButton}
+                            onPress={handleNotificationPress}
+                        >
+                            <Ionicons name="notifications-outline" size={28} color={colors.text} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <FlatList
