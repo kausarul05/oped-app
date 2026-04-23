@@ -693,11 +693,12 @@ export default function PostsList() {
                             style={styles.commentAction}
                             onPress={() => handleCommentLike(item.id)}
                         >
-                            <Ionicons
+                            {/* <Ionicons
                                 name={item.isLiked ? "thumbs-up" : "thumbs-up-outline"}
                                 size={16}
                                 color={item.isLiked ? "#4B59B3" : "#999"}
-                            />
+                            /> */}
+                            <Foundation name="like" size={24} color={item.isLiked ? "#4B59B3" : "#999"} />
                             <ThemedText style={[styles.commentActionText, item.isLiked && { color: '#4B59B3' }]}>
                                 {item.likesCount}
                             </ThemedText>

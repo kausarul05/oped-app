@@ -1,6 +1,7 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -26,7 +27,70 @@ export default function PodcastHome({ navigation }) {
     const [topEpisodes, setTopEpisodes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
     const flatListRef = useRef(null);
+
+    // Check login status
+    useEffect(() => {
+        const checkLoginStatus = async () => {
+            try {
+                const token = await AsyncStorage.getItem('authToken');
+                setIsLoggedIn(!!token);
+            } catch (error) {
+                console.error('Error checking login status:', error);
+                setIsLoggedIn(false);
+            }
+        };
+        checkLoginStatus();
+    }, []);
+
+    // Check if user is premium
+    const checkIsPremium = async () => {
+        try {
+            const userDataString = await AsyncStorage.getItem('userData');
+            if (userDataString) {
+                const userData = JSON.parse(userDataString);
+                return userData.data?.isSubscribed || userData.isSubscribed || false;
+            }
+            return false;
+        } catch (error) {
+            console.error('Error checking premium status:', error);
+            return false;
+        }
+    };
+
+    const handlePremiumContent = () => {
+        Alert.alert(
+            'Premium Content',
+            'This content is only available for premium subscribers. Would you like to subscribe to access all premium content?',
+            [
+                { text: 'Maybe Later', style: 'cancel' },
+                { 
+                    text: 'Subscribe Now', 
+                    onPress: () => navigation.navigate('Subscription')
+                }
+            ]
+        );
+    };
+
+    const handlePodcastPress = async (item) => {
+        if (!isLoggedIn) {
+            Alert.alert('Login Required', 'Please login to listen to podcasts', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Login', onPress: () => navigation.navigate('login') }
+            ]);
+            return;
+        }
+
+        if (item.isPremium) {
+            const isPremium = await checkIsPremium();
+            if (!isPremium) {
+                handlePremiumContent();
+                return;
+            }
+        }
+        navigation.navigate('PodcastDetail', { podcastId: item.id });
+    };
 
     // Fetch podcasts from API
     const fetchPodcasts = async () => {
@@ -96,15 +160,11 @@ export default function PodcastHome({ navigation }) {
         itemVisiblePercentThreshold: 50
     }).current;
 
-    const handleExpertCardPress = (item) => {
-        navigation.navigate('PodcastDetail', { podcastId: item.id });
-    };
-
     const renderExpertOpinionItem = ({ item }) => {
         return (
             <TouchableOpacity
                 style={[styles.expertCard, { width: CARD_WIDTH }]}
-                onPress={() => handleExpertCardPress(item)}
+                onPress={() => handlePodcastPress(item)}
                 activeOpacity={0.7}
             >
                 <View style={styles.imageContainer}>
@@ -137,15 +197,11 @@ export default function PodcastHome({ navigation }) {
         );
     };
 
-    const handleTopEpisodeCardPress = (episode) => {
-        navigation.navigate('PodcastDetail', { podcastId: episode.id });
-    };
-
     const renderTopEpisodeItem = ({ item }) => {
         return (
             <TouchableOpacity
                 style={styles.episodeCard}
-                onPress={() => handleTopEpisodeCardPress(item)}
+                onPress={() => handlePodcastPress(item)}
                 activeOpacity={0.7}
             >
                 <Image source={{ uri: item.image }} style={styles.episodeImage} />
@@ -225,7 +281,7 @@ export default function PodcastHome({ navigation }) {
                             <TouchableOpacity
                                 key={episode.id}
                                 style={styles.episodeCard}
-                                onPress={() => handleTopEpisodeCardPress(episode)}
+                                onPress={() => handlePodcastPress(episode)}
                                 activeOpacity={0.7}
                             >
                                 <Image source={{ uri: episode.image }} style={styles.episodeImage} />
