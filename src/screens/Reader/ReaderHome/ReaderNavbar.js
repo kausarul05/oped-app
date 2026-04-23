@@ -9,18 +9,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function ReaderNavbar() {
     const { colors } = useTheme();
     const navigation = useNavigation();
-    const [selectedCategory, setSelectedCategory] = useState('Explorer');
+    const [selectedCategory, setSelectedCategory] = useState('Explore');
     const [currentDate, setCurrentDate] = useState('');
     const [searchModalVisible, setSearchModalVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
     const categories = [
-        { id: 1, name: 'Explorer', icon: 'compass-outline' },
-        { id: 5, name: 'Politics', icon: 'flag-outline' },
-        { id: 6, name: 'Business', icon: 'briefcase-outline' },
-        { id: 4, name: 'Finance', icon: 'trending-up-outline' },
-        { id: 2, name: 'Culture', icon: 'color-palette-outline' },
-        { id: 3, name: 'Travel', icon: 'airplane-outline' },
+        { id: 1, name: 'Explore', icon: 'compass-outline', route: 'ReaderHome', categoryParam: null },
+        { id: 2, name: 'Politics', icon: 'flag-outline', route: 'CategoryStories', categoryParam: 'politics' },
+        { id: 3, name: 'Business', icon: 'briefcase-outline', route: 'CategoryStories', categoryParam: 'business' },
+        { id: 4, name: 'Finance', icon: 'trending-up-outline', route: 'CategoryStories', categoryParam: 'finance' },
+        { id: 5, name: 'Technology', icon: 'hardware-chip-outline', route: 'CategoryStories', categoryParam: 'technology' },
+        { id: 6, name: 'Culture', icon: 'color-palette-outline', route: 'CategoryStories', categoryParam: 'culture' },
+        { id: 7, name: 'Travel', icon: 'airplane-outline', route: 'CategoryStories', categoryParam: 'travel' },
+        { id: 8, name: 'Gastronomy', icon: 'restaurant-outline', route: 'CategoryStories', categoryParam: 'gastronomy' },
+        // { id: 9, name: 'Podcasts', icon: 'mic-outline', route: 'PodcastHome', categoryParam: null },
+        { id: 10, name: 'Live News', icon: 'radio-outline', route: 'LiveNews', categoryParam: null },
     ];
 
     useEffect(() => {
@@ -41,10 +45,27 @@ export default function ReaderNavbar() {
         return () => clearInterval(interval);
     }, []);
 
+    const handleCategoryPress = async (category) => {
+        setSelectedCategory(category.name);
+        
+        if (category.route === 'ReaderHome') {
+            navigation.navigate('ReaderHome');
+        } else if (category.route === 'CategoryStories') {
+            // Navigate to CategoryStories with the category parameter
+            navigation.navigate('CategoryStories', { 
+                category: category.name,
+                categoryId: category.categoryParam 
+            });
+        } else if (category.route === 'PodcastHome') {
+            navigation.navigate('PodcastHome');
+        } else if (category.route === 'LiveNews') {
+            navigation.navigate('LiveNews');
+        }
+    };
+
     const handleSearch = () => {
         if (searchQuery.trim()) {
             setSearchModalVisible(false);
-            // Navigate to search results screen with query
             navigation.navigate('SearchResults', { query: searchQuery });
         }
     };
@@ -93,7 +114,7 @@ export default function ReaderNavbar() {
                                     styles.categoryItem,
                                     selectedCategory === category.name && styles.selectedCategoryItem,
                                 ]}
-                                onPress={() => setSelectedCategory(category.name)}
+                                onPress={() => handleCategoryPress(category)}
                             >
                                 <Ionicons
                                     name={category.icon}
@@ -171,7 +192,6 @@ export default function ReaderNavbar() {
                         <View style={styles.recentContainer}>
                             <ThemedText style={styles.recentTitle}>Recent Searches</ThemedText>
                             
-                            {/* Example recent searches */}
                             {['Technology', 'World News', 'Economy'].map((item, index) => (
                                 <TouchableOpacity 
                                     key={index}
@@ -220,7 +240,6 @@ export default function ReaderNavbar() {
 
 const styles = StyleSheet.create({
     container: {
-        // flex: 1,
         backgroundColor: 'transparent',
     },
     safeArea: {
@@ -281,7 +300,6 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     selectedCategoryItem: {
-        // No background, just indicator below
         borderBottomWidth: 1,
         borderBottomColor: '#4B59B3',
     },

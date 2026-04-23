@@ -1,6 +1,7 @@
 import { ThemedText, ThemedView } from '@/src/components/ThemedComponents';
 import { useTheme } from '@/src/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import {
     FlatList,
     StyleSheet,
@@ -12,49 +13,123 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function DiscoverQuickLink({ navigation }) {
     const { colors } = useTheme();
+    const [searchQuery, setSearchQuery] = useState('');
 
     const categories = [
-        {
-            id: 1,
-            title: 'Culture',
-            description: 'Arts, lifestyle, traditions, and cultural perspectives',
-            icon: 'color-palette-outline',
-            color: '#FF6B6B',
-        },
+        // {
+        //     id: 1,
+        //     title: 'Explore',
+        //     description: 'Discover trending stories and personalized content',
+        //     icon: 'compass-outline',
+        //     color: '#4B59B3',
+        //     route: 'ReaderHome',
+        // },
         {
             id: 2,
-            title: 'Travel',
-            description: 'Destinations, experiences, and travel inspiration',
-            icon: 'airplane-outline',
-            color: '#4ECDC4',
+            title: 'Politics',
+            description: 'Political news, analysis, and expert opinions',
+            icon: 'flag-outline',
+            color: '#6C5CE7',
+            route: 'CategoryStories',
+            categoryParam: 'politics',
         },
         {
             id: 3,
-            title: 'Finance',
-            description: 'Financial news, markets, and economic insights',
-            icon: 'trending-up-outline',
-            color: '#FFD93D',
-        },
-        {
-            id: 4,
-            title: 'Politics',
-            description: 'Politics-related articles, analysis, and publications',
-            icon: 'flag-outline',
-            color: '#6C5CE7',
-        },
-        {
-            id: 5,
             title: 'Business',
             description: 'Market news, companies, and global business insights',
             icon: 'briefcase-outline',
             color: '#A8E6CF',
+            route: 'CategoryStories',
+            categoryParam: 'business',
+        },
+        {
+            id: 4,
+            title: 'Finance',
+            description: 'Financial news, markets, and economic insights',
+            icon: 'trending-up-outline',
+            color: '#FFD93D',
+            route: 'CategoryStories',
+            categoryParam: 'finance',
+        },
+        {
+            id: 5,
+            title: 'Technology',
+            description: 'Tech innovations, gadgets, and digital trends',
+            icon: 'hardware-chip-outline',
+            color: '#5856D6',
+            route: 'CategoryStories',
+            categoryParam: 'technology',
+        },
+        {
+            id: 6,
+            title: 'Culture',
+            description: 'Arts, lifestyle, traditions, and cultural perspectives',
+            icon: 'color-palette-outline',
+            color: '#FF6B6B',
+            route: 'CategoryStories',
+            categoryParam: 'culture',
+        },
+        {
+            id: 7,
+            title: 'Travel',
+            description: 'Destinations, experiences, and travel inspiration',
+            icon: 'airplane-outline',
+            color: '#4ECDC4',
+            route: 'CategoryStories',
+            categoryParam: 'travel',
+        },
+        {
+            id: 8,
+            title: 'Gastronomy',
+            description: 'Food, cuisine, and culinary experiences',
+            icon: 'restaurant-outline',
+            color: '#FF6B35',
+            route: 'CategoryStories',
+            categoryParam: 'gastronomy',
+        },
+        // {
+        //     id: 9,
+        //     title: 'Podcasts',
+        //     description: 'Audio stories, interviews, and discussions',
+        //     icon: 'mic-outline',
+        //     color: '#9B59B6',
+        //     route: 'PodcastHome',
+        // },
+        {
+            id: 10,
+            title: 'Live News',
+            description: 'Real-time updates and breaking news',
+            icon: 'radio-outline',
+            color: '#FF3B30',
+            route: 'LiveNews',
         },
     ];
+
+    const handleCategoryPress = (category) => {
+        if (category.route === 'ReaderHome') {
+            navigation.navigate('ReaderHome');
+        } else if (category.route === 'CategoryStories') {
+            navigation.navigate('CategoryStories', { 
+                category: category.title,
+                categoryId: category.categoryParam 
+            });
+        } else if (category.route === 'PodcastHome') {
+            navigation.navigate('PodcastHome');
+        } else if (category.route === 'LiveNews') {
+            navigation.navigate('LiveNews');
+        }
+    };
+
+    const handleSearch = () => {
+        if (searchQuery.trim()) {
+            navigation.navigate('SearchResults', { query: searchQuery });
+        }
+    };
 
     const renderCategory = ({ item }) => (
         <TouchableOpacity 
             style={styles.categoryCard}
-            onPress={() => navigation.navigate('CategoryStories', { category: item.title })}
+            onPress={() => handleCategoryPress(item)}
         >
             <View style={[styles.categoryIconContainer, { backgroundColor: `${item.color}15` }]}>
                 <Ionicons name={item.icon} size={28} color={item.color} />
@@ -86,7 +161,10 @@ export default function DiscoverQuickLink({ navigation }) {
                         style={styles.searchInput}
                         placeholder="Search here...."
                         placeholderTextColor="#999"
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
                         returnKeyType="search"
+                        onSubmitEditing={handleSearch}
                     />
                 </View>
 

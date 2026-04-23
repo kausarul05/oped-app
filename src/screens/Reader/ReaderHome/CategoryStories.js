@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function CategoryStories({ route, navigation }) {
     const { colors } = useTheme();
-    const { category: initialCategory } = { category: 'All' };
+    const { category: initialCategory = 'All', categoryId = '' } = route.params || { category: 'All' };
 
     const [selectedCategory, setSelectedCategory] = useState(initialCategory);
     const [searchQuery, setSearchQuery] = useState('');
@@ -39,7 +39,16 @@ export default function CategoryStories({ route, navigation }) {
         { id: 8, name: 'Finance', icon: 'trending-up-outline', color: '#FFD93D' },
         { id: 9, name: 'Politics', icon: 'flag-outline', color: '#6C5CE7' },
         { id: 10, name: 'Business', icon: 'briefcase-outline', color: '#A8E6CF' },
+        { id: 11, name: 'Technology', icon: 'hardware-chip-outline', color: '#5856D6' },
+        { id: 12, name: 'Gastronomy', icon: 'restaurant-outline', color: '#FF6B35' },
     ];
+
+    const getDisplayTitle = () => {
+        if (selectedCategory === 'All') return 'Top Stories';
+        if (selectedCategory === 'LIVE') return 'Live News';
+        if (selectedCategory === 'Top Stories') return 'Top Stories';
+        return selectedCategory;
+    };
 
     const getApiCategory = (categoryName) => {
         const mapping = {
@@ -53,8 +62,10 @@ export default function CategoryStories({ route, navigation }) {
             'Finance': 'finance',
             'Politics': 'politics',
             'Business': 'business',
+            'Technology': 'technology',
+            'Gastronomy': 'gastronomy',
         };
-        return mapping[categoryName] || '';
+        return mapping[categoryName] || categoryName.toLowerCase();
     };
 
     const fetchStories = async (page = 1, isRefresh = false) => {
@@ -108,12 +119,6 @@ export default function CategoryStories({ route, navigation }) {
         fetchStories(1, true);
     };
 
-    const handleCategoryChange = (categoryName) => {
-        setSelectedCategory(categoryName);
-        setStories([]);
-        fetchStories(1, false);
-    };
-
     // Handle search with debounce
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -132,7 +137,7 @@ export default function CategoryStories({ route, navigation }) {
     // Initial load
     useEffect(() => {
         fetchStories(1);
-    }, []);
+    }, [selectedCategory]);
 
     const formatTimeAgo = (dateString) => {
         if (!dateString) return 'recent';
@@ -175,11 +180,10 @@ export default function CategoryStories({ route, navigation }) {
     });
 
     const renderStoryItem = ({ item }) => {
-        // console.log("item", item._id)
         return (
             <TouchableOpacity
                 style={styles.storyCard}
-                onPress={() => navigation.navigate('StoryDetail', { postId: item._id })}
+                onPress={() => navigation.navigate('StoryDetail', { storyId: item._id })}
             >
                 <Image source={{ uri: item.coverImage }} style={styles.storyImage} />
                 <View style={styles.storyContent}>
@@ -238,12 +242,12 @@ export default function CategoryStories({ route, navigation }) {
     return (
         <ThemedView style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
-                {/* Header */}
+                {/* Header with Dynamic Title */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <Ionicons name="arrow-back" size={24} color="#000" />
                     </TouchableOpacity>
-                    <ThemedText style={styles.headerTitle}>Top Stories</ThemedText>
+                    <ThemedText style={styles.headerTitle}>{getDisplayTitle()}</ThemedText>
                     <TouchableOpacity style={styles.filterButton}>
                         {/* <Ionicons name="options-outline" size={24} color="#000" /> */}
                     </TouchableOpacity>
@@ -265,35 +269,6 @@ export default function CategoryStories({ route, navigation }) {
                         </TouchableOpacity>
                     )}
                 </View>
-
-                {/* Sort Options */}
-                {/* <View style={styles.sortContainer}>
-                    <ThemedText style={styles.sortLabel}>Sort by:</ThemedText>
-                    <TouchableOpacity 
-                        style={[styles.sortOption, sortBy === 'latest' && styles.sortOptionActive]}
-                        onPress={() => setSortBy('latest')}
-                    >
-                        <ThemedText style={[styles.sortOptionText, sortBy === 'latest' && styles.sortOptionTextActive]}>
-                            Latest
-                        </ThemedText>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                        style={[styles.sortOption, sortBy === 'popular' && styles.sortOptionActive]}
-                        onPress={() => setSortBy('popular')}
-                    >
-                        <ThemedText style={[styles.sortOptionText, sortBy === 'popular' && styles.sortOptionTextActive]}>
-                            Popular
-                        </ThemedText>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                        style={[styles.sortOption, sortBy === 'trending' && styles.sortOptionActive]}
-                        onPress={() => setSortBy('trending')}
-                    >
-                        <ThemedText style={[styles.sortOptionText, sortBy === 'trending' && styles.sortOptionTextActive]}>
-                            Trending
-                        </ThemedText>
-                    </TouchableOpacity>
-                </View> */}
 
                 {/* Results Count */}
                 <View style={styles.resultsContainer}>
@@ -388,35 +363,6 @@ const styles = StyleSheet.create({
         fontFamily: 'tenez',
         color: '#333',
         paddingVertical: 8,
-    },
-    sortContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        marginBottom: 12,
-        gap: 12,
-    },
-    sortLabel: {
-        fontSize: 14,
-        fontFamily: 'tenez',
-        color: '#999',
-    },
-    sortOption: {
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 16,
-        backgroundColor: '#F5F5F5',
-    },
-    sortOptionActive: {
-        backgroundColor: '#4B59B3',
-    },
-    sortOptionText: {
-        fontSize: 13,
-        fontFamily: 'CoFoRaffineMedium',
-        color: '#666',
-    },
-    sortOptionTextActive: {
-        color: '#FFFFFF',
     },
     resultsContainer: {
         paddingHorizontal: 16,
