@@ -687,9 +687,8 @@ export default function ReaderSlider() {
                 inactiveSlideScale={0.9}
                 inactiveSlideOpacity={0.7}
                 loop={true}
-                autoplay={true}
+                autoplay={false}
                 onSnapToItem={onSnapToItem}
-
             />
 
             {/* Comment Modal */}

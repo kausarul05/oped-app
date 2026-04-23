@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useTheme } from '../context/ThemeContext';
+import Subscription from '../screens/Reader/Inbox/Settings/Subscription';
 import AuthorProfile from '../screens/Reader/ReaderHome/AuthorProfile';
 import CategoryStories from '../screens/Reader/ReaderHome/CategoryStories';
 import DiscoverQuickLink from '../screens/Reader/ReaderHome/DiscoverQuickLink';
@@ -7,7 +8,6 @@ import LiveNewsDetail from '../screens/Reader/ReaderHome/LiveNewsDetail';
 import ReaderHome from '../screens/Reader/ReaderHome/ReaderHome';
 import SearchResults from '../screens/Reader/ReaderHome/SearchResults';
 import StoryDetail from '../screens/Reader/ReaderHome/StoreDetail';
-// import ReaderProfile from '../screens/Reader/ReaderProfile';
 // Import other reader screens
 
 const Stack = createNativeStackNavigator();
@@ -60,6 +60,11 @@ export default function ReaderNavigator() {
             <Stack.Screen
                 name="LiveNewsDetail"
                 component={LiveNewsDetail}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="Subscription"
+                component={Subscription}
                 options={{ headerShown: false }}
             />
         </Stack.Navigator>

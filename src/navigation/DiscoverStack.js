@@ -1,4 +1,5 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import Subscription from '../screens/Reader/Inbox/Settings/Subscription';
 import AuthorProfile from '../screens/Reader/ReaderHome/AuthorProfile';
 import CategoryStories from '../screens/Reader/ReaderHome/CategoryStories';
 import DiscoverQuickLink from '../screens/Reader/ReaderHome/DiscoverQuickLink';
@@ -21,6 +22,10 @@ export default function DiscoverStack() {
             <Stack.Screen name="DiscoverQuickLink" component={DiscoverQuickLink} />
             <Stack.Screen name="CategoryStories" component={CategoryStories} />
             <Stack.Screen name="LiveNews" component={LiveNews} />
+            <Stack.Screen
+                name="Subscription"
+                component={Subscription}
+            />
         </Stack.Navigator>
     );
 }

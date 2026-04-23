@@ -35,6 +35,7 @@ export default function PostsList() {
     const [hasMore, setHasMore] = useState(true);
     const [currentUserId, setCurrentUserId] = useState(null);
     const [savingPost, setSavingPost] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     // Comment Modal States
     const [commentModalVisible, setCommentModalVisible] = useState(false);
@@ -56,11 +57,10 @@ export default function PostsList() {
         const getCurrentUser = async () => {
             try {
                 const userDataString = await AsyncStorage.getItem('userData');
-                console.log('Raw userData:', userDataString);
+                const token = await AsyncStorage.getItem('authToken');
                 
-                if (userDataString) {
+                if (userDataString && token) {
                     const userData = JSON.parse(userDataString);
-                    
                     let userId = null;
                     
                     if (userData.data?.id) {
@@ -72,13 +72,58 @@ export default function PostsList() {
                     }
                     
                     setCurrentUserId(userId);
+                    setIsLoggedIn(true);
+                } else {
+                    setIsLoggedIn(false);
                 }
             } catch (error) {
                 console.error('Error getting current user:', error);
+                setIsLoggedIn(false);
             }
         };
         getCurrentUser();
     }, []);
+
+    // Check if user is premium (you can implement this based on your user data)
+    const checkIsPremium = async () => {
+        try {
+            const userDataString = await AsyncStorage.getItem('userData');
+            if (userDataString) {
+                const userData = JSON.parse(userDataString);
+                // Check if user has premium subscription
+                return userData.data?.isSubscribed || userData.isSubscribed || false;
+            }
+            return false;
+        } catch (error) {
+            console.error('Error checking premium status:', error);
+            return false;
+        }
+    };
+
+    const handlePremiumContent = () => {
+        Alert.alert(
+            'Premium Content',
+            'This content is only available for premium subscribers. Would you like to subscribe to access all premium content?',
+            [
+                { text: 'Maybe Later', style: 'cancel' },
+                { 
+                    text: 'Subscribe Now', 
+                    onPress: () => navigation.navigate('Subscription')
+                }
+            ]
+        );
+    };
+
+    const handlePostPress = async (item) => {
+        if (item.isPremium) {
+            const isPremium = await checkIsPremium();
+            if (!isPremium) {
+                handlePremiumContent();
+                return;
+            }
+        }
+        navigation.navigate('StoryDetail', { postId: item.id });
+    };
 
     // Fetch posts from API
     const fetchPosts = async (pageNum = 1, isLoadMore = false) => {
@@ -214,6 +259,14 @@ export default function PostsList() {
     };
 
     const toggleLike = async (id, currentLikeCount) => {
+        if (!isLoggedIn) {
+            Alert.alert('Login Required', 'Please login to like posts', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Login', onPress: () => navigation.navigate('login') }
+            ]);
+            return;
+        }
+
         const isCurrentlyLiked = likedPosts[id];
         const newLikedState = !isCurrentlyLiked;
 
@@ -229,9 +282,7 @@ export default function PostsList() {
 
         try {
             if (!isCurrentlyLiked) {
-                // console.log("story", id, "like")
                 const result = await reactionService.addReaction('story', id, 'like');
-                // console.log("result", result)
                 if (!result.success) {
                     setLikedPosts(prev => ({ ...prev, [id]: isCurrentlyLiked }));
                     setLikeCounts(prev => ({ ...prev, [id]: currentLikeCount }));
@@ -271,6 +322,14 @@ export default function PostsList() {
 
     // Save/Unsave Post Function
     const handleSavePost = async (postId) => {
+        if (!isLoggedIn) {
+            Alert.alert('Login Required', 'Please login to save posts', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Login', onPress: () => navigation.navigate('login') }
+            ]);
+            return;
+        }
+
         if (savingPost) return;
         
         setSavingPost(true);
@@ -321,6 +380,14 @@ export default function PostsList() {
 
     // Comment Functions
     const openCommentModal = async (post) => {
+        if (!isLoggedIn) {
+            Alert.alert('Login Required', 'Please login to view comments', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Login', onPress: () => navigation.navigate('login') }
+            ]);
+            return;
+        }
+
         setCurrentPost(post);
         setCommentModalVisible(true);
         setCommentPage(1);
@@ -729,7 +796,7 @@ export default function PostsList() {
         return (
             <TouchableOpacity
                 activeOpacity={0.9}
-                onPress={() => navigation.navigate('StoryDetail', { postId: item.id })}
+                onPress={() => handlePostPress(item)}
             >
                 <View style={styles.postContainer}>
                     {/* {item.isPremium && (
@@ -782,7 +849,6 @@ export default function PostsList() {
                             onPress={() => handleShare(item)}
                         >
                             <FontAwesome6 name="share-from-square" size={18} color="black" />
-                            {/* <ThemedText style={styles.actionText}>{item.shareCount}</ThemedText> */}
                         </TouchableOpacity>
                     </View>
 
@@ -943,11 +1009,6 @@ export default function PostsList() {
                                 </>
                             )}
                         </TouchableOpacity>
-                        {/* <View style={styles.menuDivider} /> */}
-                        {/* <TouchableOpacity style={styles.menuItem} onPress={() => handleMenuOption('notInterested', selectedPost)}>
-                            <Ionicons name="thumbs-down-outline" size={20} color="#000" />
-                            <ThemedText style={styles.menuText}>Not Interested</ThemedText>
-                        </TouchableOpacity> */}
                     </View>
                 </TouchableOpacity>
             </Modal>
