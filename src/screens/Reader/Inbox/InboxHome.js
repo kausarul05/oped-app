@@ -37,13 +37,16 @@ export default function InboxHome({ navigation }) {
     const [loadingStories, setLoadingStories] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [currentUserId, setCurrentUserId] = useState(null);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     // Get current user ID from storage
     useEffect(() => {
         const getCurrentUser = async () => {
             try {
                 const userDataString = await AsyncStorage.getItem('userData');
-                if (userDataString) {
+                const token = await AsyncStorage.getItem('authToken');
+                
+                if (userDataString && token) {
                     const userData = JSON.parse(userDataString);
                     let userId = null;
                     if (userData.data?.id) {
@@ -54,13 +57,65 @@ export default function InboxHome({ navigation }) {
                         userId = userData._id;
                     }
                     setCurrentUserId(userId);
+                    setIsLoggedIn(true);
+                } else {
+                    setIsLoggedIn(false);
                 }
             } catch (error) {
                 console.error('Error getting current user:', error);
+                setIsLoggedIn(false);
             }
         };
         getCurrentUser();
     }, []);
+
+    // Check if user is premium
+    const checkIsPremium = async () => {
+        try {
+            const userDataString = await AsyncStorage.getItem('userData');
+            if (userDataString) {
+                const userData = JSON.parse(userDataString);
+                return userData.data?.isSubscribed || userData.isSubscribed || false;
+            }
+            return false;
+        } catch (error) {
+            console.error('Error checking premium status:', error);
+            return false;
+        }
+    };
+
+    const handlePremiumContent = () => {
+        Alert.alert(
+            'Premium Content',
+            'This content is only available for premium subscribers. Would you like to subscribe to access all premium content?',
+            [
+                { text: 'Maybe Later', style: 'cancel' },
+                { 
+                    text: 'Subscribe Now', 
+                    onPress: () => navigation.navigate('Subscription')
+                }
+            ]
+        );
+    };
+
+    const handleStoryPress = async (item) => {
+        if (!isLoggedIn) {
+            Alert.alert('Login Required', 'Please login to read stories', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Login', onPress: () => navigation.navigate('login') }
+            ]);
+            return;
+        }
+
+        if (item.type === 'Premium') {
+            const isPremium = await checkIsPremium();
+            if (!isPremium) {
+                handlePremiumContent();
+                return;
+            }
+        }
+        navigation.navigate('StoryDetail', { postId: item.id });
+    };
 
     // Fetch following list (newsletters)
     const fetchFollowingList = async () => {
@@ -131,6 +186,7 @@ export default function InboxHome({ navigation }) {
                         shareCount: story.shares || 0,
                         createdAt: story.createdAt,
                         isLiked: likeStatus,
+                        isPremium: story.isPremium,
                         stats: {
                             likes: formatNumber(totalLikes),
                             comments: formatNumber(totalComments),
@@ -198,6 +254,14 @@ export default function InboxHome({ navigation }) {
     }, [currentUserId]);
 
     const toggleLike = async (id, currentLikeCount) => {
+        if (!isLoggedIn) {
+            Alert.alert('Login Required', 'Please login to like posts', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Login', onPress: () => navigation.navigate('login') }
+            ]);
+            return;
+        }
+
         const isCurrentlyLiked = likedPosts[id];
         const newLikedState = !isCurrentlyLiked;
 
@@ -231,6 +295,13 @@ export default function InboxHome({ navigation }) {
     };
 
     const handleComment = (post) => {
+        if (!isLoggedIn) {
+            Alert.alert('Login Required', 'Please login to comment', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Login', onPress: () => navigation.navigate('login') }
+            ]);
+            return;
+        }
         navigation.navigate('StoryDetail', { storyId: post.id });
     };
 
@@ -255,6 +326,14 @@ export default function InboxHome({ navigation }) {
     };
 
     const handleSavePost = async (postId) => {
+        if (!isLoggedIn) {
+            Alert.alert('Login Required', 'Please login to save posts', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Login', onPress: () => navigation.navigate('login') }
+            ]);
+            return;
+        }
+
         try {
             const result = await libraryService.toggleSave({
                 contentType: 'story',
@@ -264,6 +343,8 @@ export default function InboxHome({ navigation }) {
             
             if (result.success) {
                 Alert.alert('Success', result.message || 'Post saved to library!');
+                setMenuVisible(false);
+                setSelectedPost(null);
             } else {
                 Alert.alert('Error', result.error || 'Failed to save post');
             }
@@ -323,7 +404,7 @@ export default function InboxHome({ navigation }) {
             <View style={styles.storyContainer}>
                 <TouchableOpacity
                     activeOpacity={0.9}
-                    onPress={() => navigation.navigate('StoryDetail', { postId: item.id })}
+                    onPress={() => handleStoryPress(item)}
                 >
                     <View style={styles.storyHeader}>
                         <View style={styles.storyHeaderLeft}>
@@ -386,14 +467,16 @@ export default function InboxHome({ navigation }) {
 
                 <TouchableOpacity
                     activeOpacity={0.9}
-                    onPress={() => navigation.navigate('StoryDetail', { storyId: item.id })}
+                    onPress={() => handleStoryPress(item)}
                 >
                     <View style={styles.storyFooter}>
                         <ThemedText style={styles.storyFooterText}>
                             Reading Time: {item.readTime}
                         </ThemedText>
-                        <View style={styles.storyArticleBadge}>
-                            <ThemedText style={styles.storyArticleBadgeText}>{item.type}</ThemedText>
+                        <View style={[styles.storyArticleBadge, item.type === 'Premium' && styles.premiumBadgeFooter]}>
+                            <ThemedText style={[styles.storyArticleBadgeText, item.type === 'Premium' && styles.premiumBadgeFooterText]}>
+                                {item.type}
+                            </ThemedText>
                         </View>
                     </View>
                 </TouchableOpacity>
@@ -511,36 +594,6 @@ export default function InboxHome({ navigation }) {
                             <Ionicons name="bookmark-outline" size={20} color="#000" />
                             <ThemedText style={styles.menuText}>Save Post</ThemedText>
                         </TouchableOpacity>
-
-                        {/* <View style={styles.menuDivider} /> */}
-
-                        {/* <TouchableOpacity
-                            style={styles.menuItem}
-                            onPress={() => handleMenuOption('hide')}
-                        >
-                            <Ionicons name="eye-off-outline" size={20} color="#000" />
-                            <ThemedText style={styles.menuText}>Hide Post</ThemedText>
-                        </TouchableOpacity> */}
-
-                        {/* <View style={styles.menuDivider} /> */}
-
-                        {/* <TouchableOpacity
-                            style={styles.menuItem}
-                            onPress={() => handleMenuOption('notInterested')}
-                        >
-                            <Ionicons name="thumbs-down-outline" size={20} color="#000" />
-                            <ThemedText style={styles.menuText}>Not Interested</ThemedText>
-                        </TouchableOpacity>
-
-                        <View style={styles.menuDivider} /> */}
-
-                        {/* <TouchableOpacity
-                            style={[styles.menuItem, styles.reportItem]}
-                            onPress={() => handleMenuOption('report')}
-                        >
-                            <Ionicons name="flag-outline" size={20} color="#FF3B30" />
-                            <ThemedText style={[styles.menuText, styles.reportText]}>Report Post</ThemedText>
-                        </TouchableOpacity> */}
                     </View>
                 </TouchableOpacity>
             </Modal>
@@ -783,6 +836,12 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontFamily: 'CoFoRaffineBold',
         color: '#3448D6',
+    },
+    premiumBadgeFooter: {
+        backgroundColor: '#FF9500',
+    },
+    premiumBadgeFooterText: {
+        color: '#FFFFFF',
     },
     emptyStories: {
         alignItems: 'center',
